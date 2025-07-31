@@ -23,6 +23,21 @@ const InventoryController = {
     }
   },
 
+  // GET Categories
+  async getAllCategories(req,res){
+    try{
+      const { data, error } = await supabase.from("categories").select("id, name");
+      if (error) {
+        console.error("Error fetching categories:", error);
+        return res.status(500).json({ error: error.message });
+      }
+      res.json(data);
+    } catch(err){
+      console.error("Unhandled error in getAllCategories:",err);
+      res.status(500).json({error:err.message})
+    }
+  },
+
   // POST
   async addProduct(req, res) {
     try {

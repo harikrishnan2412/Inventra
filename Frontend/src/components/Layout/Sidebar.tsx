@@ -20,6 +20,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ userRole }: SidebarProps) => {
+  console.log("Sidebar received userRole:", userRole); // Debugging line
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -88,7 +89,7 @@ const Sidebar = ({ userRole }: SidebarProps) => {
       "flex flex-col h-screen bg-card border-r border-border transition-all duration-300",
       isCollapsed ? "w-16" : "w-64"
     )}>
-      {/* Header */}
+  
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           {!isCollapsed && (
@@ -110,7 +111,7 @@ const Sidebar = ({ userRole }: SidebarProps) => {
         </div>
       </div>
 
-      {/* Navigation */}
+     
       <nav className="flex-1 p-2 space-y-1">
         {filteredMenuItems.map((item) => {
           const Icon = item.icon;
@@ -134,7 +135,7 @@ const Sidebar = ({ userRole }: SidebarProps) => {
         })}
       </nav>
 
-      {/* Footer */}
+      
       <div className="p-2 border-t border-border">
         <Button
           variant="ghost"
