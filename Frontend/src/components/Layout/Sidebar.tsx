@@ -28,8 +28,8 @@ const Sidebar = ({ userRole }: SidebarProps) => {
   const menuItems = [
     {
       icon: BarChart3,
-      label: "Dashboard",
-      path: "/dashboard",
+      label: "Dashboardm",
+      path: "/dashboardm",
       roles: ["admin", "manager", "staff"]
     },
     {
@@ -96,7 +96,7 @@ const Sidebar = ({ userRole }: SidebarProps) => {
               <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
                 <Package className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-lg">InvenTech</span>
+              <span className="font-semibold text-lg">Inventra</span>
             </div>
           )}
           <Button

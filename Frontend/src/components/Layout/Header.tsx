@@ -1,14 +1,12 @@
-import { Bell, Search, User } from "lucide-react";
+import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 
 interface HeaderProps {
   user: {
@@ -20,32 +18,9 @@ interface HeaderProps {
 
 const Header = ({ user }: HeaderProps) => {
   return (
-    <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-between">
-      {/* Search */}
-      <div className="flex-1 max-w-md">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search products, orders..."
-            className="pl-10 bg-background/50"
-          />
-        </div>
-      </div>
-
+    <header className="h-16 bg-card flex items-center justify-end">
       {/* Right section */}
       <div className="flex items-center gap-4">
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-5 h-5" />
-          <Badge 
-            variant="destructive" 
-            className="absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center p-0 text-xs"
-          >
-            3
-          </Badge>
-        </Button>
-
-        {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 hover:bg-accent">

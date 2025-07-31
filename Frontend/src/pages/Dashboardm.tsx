@@ -30,11 +30,11 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 
-interface DashboardProps {
+interface DashboardmProps {
   userRole: string;
 }
 
-const Dashboard = ({ userRole }: DashboardProps) => {
+const Dashboardm = ({ userRole }: DashboardmProps) => {
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
@@ -143,7 +143,7 @@ const Dashboard = ({ userRole }: DashboardProps) => {
   };
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-9 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -173,7 +173,7 @@ const Dashboard = ({ userRole }: DashboardProps) => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
                     <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className={`text-sm ${stat.changeType === "increase" ? "text-green-600" : stat.changeType === "warning" ? "text-red-600" : "text-muted-foreground"}`}>
+                    <p className={`text-sm ${stat.changeType === "increase" ? "text-green-600" : stat.changeType === "warning" ? "text-blue-600" : "text-muted-foreground"}`}>
                       {stat.change} from last month
                     </p>
                   </div>
@@ -305,9 +305,7 @@ const Dashboard = ({ userRole }: DashboardProps) => {
                         Stock: {item.stock} / Threshold: {item.threshold}
                       </p>
                     </div>
-                    <Button size="sm" variant="destructive">
-                      Reorder
-                    </Button>
+                   
                   </div>
                 ))}
               </div>
@@ -319,4 +317,4 @@ const Dashboard = ({ userRole }: DashboardProps) => {
   );
 };
 
-export default Dashboard;
+export default Dashboardm;

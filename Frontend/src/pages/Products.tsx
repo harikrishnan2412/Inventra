@@ -123,7 +123,6 @@ const Products = () => {
   };
 
   const fetchCategories = async () => {
-    // TODO: Replace with actual Supabase query
     setCategories([
       { id: 1, name: "Electronics" },
       { id: 2, name: "Footwear" },
@@ -135,7 +134,6 @@ const Products = () => {
   const handleAddProduct = async () => {
     setIsLoading(true);
     try {
-      // TODO: Replace with actual Supabase insert
       const newProduct = {
         id: Date.now(),
         ...formData,
@@ -170,7 +168,6 @@ const Products = () => {
     
     setIsLoading(true);
     try {
-      // TODO: Replace with actual Supabase update
       const updatedProducts = products.map(product =>
         product.id === editingProduct.id
           ? {
@@ -206,7 +203,6 @@ const Products = () => {
 
   const handleDeleteProduct = async (productId: number) => {
     try {
-      // TODO: Replace with actual Supabase delete
       setProducts(products.filter(product => product.id !== productId));
       
       toast({

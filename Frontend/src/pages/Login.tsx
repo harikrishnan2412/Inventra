@@ -40,7 +40,7 @@ toast({
   description: "Welcome to Inventory Management System!",
 });
 
-navigate('/dashboard');
+navigate('/dashboardm');
 
       
       toast({
@@ -48,7 +48,7 @@ navigate('/dashboard');
         description: "Welcome to Inventory Management System!",
       });
       
-      navigate('/dashboard');
+      navigate('/dashboardm');
     } catch (error) {
       toast({
         title: "Login failed",
