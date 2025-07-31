@@ -40,9 +40,11 @@ import {
   Filter,
   Download,
   Image as ImageIcon,
-  Loader2
+  Loader2,
+  FileText
 } from "lucide-react";
 import { inventoryAPI } from "@/lib/api";
+import { pdfReportGenerator } from "@/lib/pdfReport";
 
 interface Product {
   id: string;
@@ -70,6 +72,7 @@ const Products = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -213,6 +216,26 @@ const Products = () => {
     }
   };
 
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      await pdfReportGenerator.generateDetailedReport();
+      toast({
+        title: "Report Generated",
+        description: "PDF report has been generated and downloaded successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error generating report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       id: "",
@@ -269,6 +292,32 @@ const Products = () => {
             <Download className="w-4 h-4 mr-2" />
             Download
           </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <FileText className="w-4 h-4 mr-2" />
+                Generate Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Generate Report</DialogTitle>
+                <DialogDescription>
+                  Generate a comprehensive PDF report of all your business data including orders, products, and analytics.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleGenerateReport} 
+                  disabled={isGeneratingReport}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {isGeneratingReport ? "Generating..." : "Download Report"}
+                  {isGeneratingReport && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>
               <Button variant="gradient">
@@ -412,7 +461,7 @@ const Products = () => {
                           {product.stock_quantity}
                         </div>
                       </TableCell>
-                      <TableCell>${product.price.toFixed(2)}</TableCell>
+                      <TableCell>₹{product.price.toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge variant={stockStatus.variant as any}>
                           {stockStatus.label}

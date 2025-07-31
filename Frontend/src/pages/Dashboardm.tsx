@@ -15,7 +15,10 @@ import {
   Activity,
   TrendingUp,
   Clock,
-  Loader2
+  Loader2,
+  IndianRupee,
+  FileText,
+  Download
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -29,6 +32,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { inventoryAPI, orderAPI, salesStatsAPI, stockMonitorAPI } from "@/lib/api";
+import { pdfReportGenerator } from "@/lib/pdfReport";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface DashboardmProps {
   userRole: string;
@@ -63,6 +76,12 @@ interface LowStockItem {
   threshold: number;
 }
 
+interface TopSoldProduct {
+  name: string;
+  amount: number;
+  quantity: number;
+}
+
 const Dashboardm = ({ userRole }: DashboardmProps) => {
   const [stats, setStats] = useState<Stats>({
     totalProducts: 0,
@@ -76,7 +95,10 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
+  const [topSoldProducts, setTopSoldProducts] = useState<TopSoldProduct[]>([]);
+  const [allOrders, setAllOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const { toast } = useToast();
 
   const [categoryData] = useState([
@@ -88,27 +110,86 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
 
   const [view, setView] = useState<"daily" | "weekly">("daily");
 
-  const dailyTopSoldProducts = [
-    { name: "Wireless Mouse", amount: 120 },
-    { name: "USB-C Hub", amount: 90 },
-    { name: "Mechanical Keyboard", amount: 75 },
-    { name: "Monitor Stand", amount: 60 },
-    { name: "Webcam 1080p", amount: 50 },
-  ];
-
-  const weeklyTopSoldProducts = [
-    { name: "Laptop Pro X", amount: 350 },
-    { name: "External SSD 1TB", amount: 280 },
-    { name: "Noise-Cancelling Headphones", amount: 220 },
-    { name: "Smartwatch Series 5", amount: 180 },
-    { name: "Gaming Chair", amount: 150 },
-  ];
-
-  const topSoldProducts = view === "daily" ? dailyTopSoldProducts : weeklyTopSoldProducts;
-
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    // Recalculate top sold products when view changes
+    if (allOrders.length > 0) {
+      const newTopProducts = calculateTopSoldProducts(allOrders, view);
+      setTopSoldProducts(newTopProducts);
+    }
+  }, [view, allOrders]);
+
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      await pdfReportGenerator.generateDetailedReport();
+      toast({
+        title: "Report Generated",
+        description: "PDF report has been generated and downloaded successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error generating report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
+  const calculateTopSoldProducts = (orders: any[], view: "daily" | "weekly") => {
+    const now = new Date();
+    const productSales: { [key: string]: { name: string; amount: number; quantity: number } } = {};
+
+    orders.forEach((order: any) => {
+      const orderDate = new Date(order.order_date || order.created_at);
+      let includeOrder = false;
+
+      if (view === "daily") {
+        // Include orders from today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const orderDay = new Date(orderDate);
+        orderDay.setHours(0, 0, 0, 0);
+        includeOrder = orderDay.getTime() === today.getTime();
+      } else {
+        // Include orders from the last 7 days
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        includeOrder = orderDate >= weekAgo;
+      }
+
+      if (includeOrder && order.items && Array.isArray(order.items)) {
+        order.items.forEach((item: any) => {
+          const productId = item.product_id || item.id;
+          const productName = item.product_name || item.name || 'Unknown Product';
+          const quantity = item.quantity || 1;
+          const price = item.price || 0;
+          const totalAmount = quantity * price;
+
+          if (productSales[productId]) {
+            productSales[productId].amount += totalAmount;
+            productSales[productId].quantity += quantity;
+          } else {
+            productSales[productId] = {
+              name: productName,
+              amount: totalAmount,
+              quantity: quantity
+            };
+          }
+        });
+      }
+    });
+
+    // Convert to array and sort by amount
+    return Object.values(productSales)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+  };
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -152,6 +233,14 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
         created_at: order.order_date || order.created_at
       })));
 
+      // Set all orders for top sold products calculation
+      setAllOrders(orders);
+
+      // Calculate top sold products
+      const dailyTopProducts = calculateTopSoldProducts(orders, "daily");
+      const weeklyTopProducts = calculateTopSoldProducts(orders, "weekly");
+      setTopSoldProducts(view === "daily" ? dailyTopProducts : weeklyTopProducts);
+
       // Set low stock items
       setLowStockItems(lowStockItems.map((item: any) => ({
         name: item.name,
@@ -159,17 +248,28 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
         threshold: 10 // Default threshold
       })));
 
-      // Generate mock sales data for now (since we don't have detailed sales API)
-      const mockSalesData = [
-        { name: "Mon", sales: Math.floor(Math.random() * 5000) + 2000, orders: Math.floor(Math.random() * 30) + 15 },
-        { name: "Tue", sales: Math.floor(Math.random() * 5000) + 2000, orders: Math.floor(Math.random() * 30) + 15 },
-        { name: "Wed", sales: Math.floor(Math.random() * 5000) + 2000, orders: Math.floor(Math.random() * 30) + 15 },
-        { name: "Thu", sales: Math.floor(Math.random() * 5000) + 2000, orders: Math.floor(Math.random() * 30) + 15 },
-        { name: "Fri", sales: Math.floor(Math.random() * 5000) + 2000, orders: Math.floor(Math.random() * 30) + 15 },
-        { name: "Sat", sales: Math.floor(Math.random() * 5000) + 2000, orders: Math.floor(Math.random() * 30) + 15 },
-        { name: "Sun", sales: Math.floor(Math.random() * 5000) + 2000, orders: Math.floor(Math.random() * 30) + 15 }
-      ];
-      setSalesData(mockSalesData);
+      // Generate sales data based on real order dates
+      const generateSalesDataFromOrders = (orders: any[]) => {
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const salesData = days.map(day => ({ name: day, sales: 0, orders: 0 }));
+        
+        orders.forEach((order: any) => {
+          const orderDate = new Date(order.order_date || order.created_at);
+          const dayIndex = orderDate.getDay();
+          const dayName = days[dayIndex];
+          
+          const salesIndex = salesData.findIndex(item => item.name === dayName);
+          if (salesIndex !== -1) {
+            salesData[salesIndex].sales += order.total_price || 0;
+            salesData[salesIndex].orders += 1;
+          }
+        });
+        
+        return salesData;
+      };
+      
+      const realSalesData = generateSalesDataFromOrders(orders);
+      setSalesData(realSalesData);
 
     } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
@@ -214,8 +314,8 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
     },
     {
       title: "Revenue",
-      value: `$${stats.totalRevenue.toLocaleString()}`,
-      icon: DollarSign,
+      value: `₹${stats.totalRevenue.toLocaleString()}`,
+      icon: IndianRupee,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
       change: "+23%",
@@ -252,10 +352,32 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
             <Activity className="w-4 h-4 mr-2" />
             Live View
           </Button>
-          <Button variant="gradient">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Generate Report
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="gradient">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Generate Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Generate Report</DialogTitle>
+                <DialogDescription>
+                  Generate a comprehensive PDF report of all your business data including orders, products, and analytics.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleGenerateReport} 
+                  disabled={isGeneratingReport}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {isGeneratingReport ? "Generating..." : "Download Report"}
+                  {isGeneratingReport && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -342,12 +464,21 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {topSoldProducts.map((product, index) => (
-                    <div key={index} className="flex items-center justify-between">
-                      <p className="text-sm font-medium">{product.name}</p>
-                      <p className="text-sm text-muted-foreground">{product.amount} sold</p>
+                  {topSoldProducts.length > 0 ? (
+                    topSoldProducts.map((product, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <p className="text-sm font-medium">{product.name}</p>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">₹{product.amount.toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">{product.quantity} sold</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-muted-foreground">No sales data available</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -381,7 +512,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">${order.total_amount}</p>
+                        <p className="font-medium">₹{order.total_amount}</p>
                         <div className="flex items-center gap-2">
                           <Badge variant={getStatusColor(order.status) as any}>
                             {order.status}

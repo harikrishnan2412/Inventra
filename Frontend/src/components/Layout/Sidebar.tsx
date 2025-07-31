@@ -52,12 +52,6 @@ const Sidebar = ({ userRole }: SidebarProps) => {
       roles: [ "manager", "staff"]
     },
     {
-      icon: FileText,
-      label: "Reports",
-      path: "/reports",
-      roles: [ "manager"]
-    },
-    {
       icon: Users,
       label: "Users",
       path: "/users",

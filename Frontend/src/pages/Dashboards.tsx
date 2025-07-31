@@ -45,7 +45,13 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
     totalOrders: 0,
   });
 
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState([
+    { id: '#ORD001', customer: 'nikith', status: 'completed', amount: 2499.99, time: '2 hours ago' },
+    { id: '#ORD002', customer: 'suhana', status: 'pending', amount: 1249.50, time: '4 hours ago' },
+    { id: '#ORD003', customer: 'nikhil', status: 'processing', amount: 4999.99, time: '6 hours ago' },
+    { id: '#ORD004', customer: 'ashwin', status: 'completed', amount: 649.00, time: '8 hours ago' },
+    { id: '#ORD005', customer: 'zara', status: 'cancelled', amount: 329.00, time: '1 day ago' }
+  ]);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
 
   useEffect(() => {
@@ -54,12 +60,12 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
         totalProducts: 1247,
         totalOrders: 892,
       });
-      setRecentOrders([
-        { id: "#ORD001", customer: "nikith", status: "completed", amount: 299.99, time: "2 hours ago" },
-        { id: "#ORD002", customer: "suhana", status: "pending", amount: 149.5, time: "4 hours ago" },
-        { id: "#ORD003", customer: "nikhil", status: "processing", amount: 599.99, time: "6 hours ago" },
-        { id: "#ORD004", customer: "ashwin", status: "completed", amount: 79.99, time: "8 hours ago" },
-        { id: "#ORD005", customer: "zara", status: "cancelled", amount: 39.00, time: "1 day ago" },
+      setOrders([
+        { id: '#ORD001', customer: 'nikith', status: 'completed', amount: 2499.99, time: '2 hours ago' },
+        { id: '#ORD002', customer: 'suhana', status: 'pending', amount: 1249.50, time: '4 hours ago' },
+        { id: '#ORD003', customer: 'nikhil', status: 'processing', amount: 4999.99, time: '6 hours ago' },
+        { id: '#ORD004', customer: 'ashwin', status: 'completed', amount: 649.00, time: '8 hours ago' },
+        { id: '#ORD005', customer: 'zara', status: 'cancelled', amount: 329.00, time: '1 day ago' }
       ]);
       setLowStockItems([
         { name: "prod1", stock: 5, threshold: 10 },
@@ -157,7 +163,7 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentOrders.map(order => (
+              {orders.map(order => (
                 <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
@@ -169,7 +175,7 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-2">
-                    <p className="font-medium">${order.amount}</p>
+                    <p className="font-medium">₹{order.amount}</p>
                     <div className="flex items-center gap-2">
                        <Badge variant={getStatusColor(order.status) as any}>
                         {order.status}
