@@ -85,9 +85,20 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-primary p-4">
-      <div className="w-full max-w-md animate-fade-in">
-        <Card className="shadow-elegant border-0">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{
+        backgroundImage: `url('coolbackgrounds-topography-micron.svg')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Overlay for better readability */}
+    {/*<div className="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>*/}
+      
+      <div className="w-full max-w-md animate-fade-in relative z-10">
+        <Card className="shadow-elegant border-0 bg-white/95 backdrop-blur-sm">
           <CardHeader className="space-y-4 text-center">
             <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-xl flex items-center justify-center shadow-elegant">
               <Package className="w-8 h-8 text-primary-foreground" />

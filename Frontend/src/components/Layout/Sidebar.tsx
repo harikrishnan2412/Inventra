@@ -29,33 +29,27 @@ const Sidebar = ({ userRole }: SidebarProps) => {
   const menuItems = [
     {
       icon: BarChart3,
-      label: "Dashboardm",
+      label: "Dashboard",
       path: "/dashboardm",
-      roles: ["admin", "manager", "staff"]
+      roles: [ "manager", "staff"]
     },
     {
       icon: Package,
       label: "Products",
       path: "/products",
-      roles: ["admin", "manager"]
+      roles: [ "manager"]
     },
     {
       icon: ShoppingCart,
       label: "Orders",
       path: "/orders",
-      roles: ["admin", "manager", "staff"]
-    },
-    {
-      icon: AlertTriangle,
-      label: "Inventory",
-      path: "/inventory",
-      roles: ["admin", "manager"]
+      roles: [ "manager", "staff"]
     },
     {
       icon: FileText,
       label: "Reports",
       path: "/reports",
-      roles: ["admin", "manager"]
+      roles: [ "manager"]
     },
     {
       icon: Users,
@@ -63,12 +57,7 @@ const Sidebar = ({ userRole }: SidebarProps) => {
       path: "/users",
       roles: ["admin"]
     },
-    {
-      icon: Settings,
-      label: "Settings",
-      path: "/settings",
-      roles: ["admin", "manager", "staff"]
-    }
+
   ];
 
   const filteredMenuItems = menuItems.filter(item => 

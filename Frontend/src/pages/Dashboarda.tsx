@@ -141,7 +141,7 @@ const Dashboarda = ({ userRole }: DashboardaProps) => {
 
       <Card className="animate-slide-up shadow-elegant">
         <CardHeader>
-          <CardTitle>Existing accounts</CardTitle>
+          <CardTitle>Users</CardTitle>
           <CardDescription>Revoke access if needed</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
