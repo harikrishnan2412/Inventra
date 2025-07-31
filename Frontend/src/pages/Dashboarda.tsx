@@ -1,3 +1,5 @@
+// src/pages/Dashboarda.tsx
+
 import { useState, useEffect } from "react";
 import axios from "axios";
 import {
@@ -18,11 +20,15 @@ import {
 } from "@/components/ui/select";
 import { Trash2, PlusCircle } from "lucide-react";
 
-// --- THIS IS THE FIX ---
-// We define the full URL of your backend server.
 const API_URL = "http://localhost:5000/api/users";
 
-const Dashboarda = () => {
+// --- FIX 1: Define an interface for the component's props ---
+interface DashboardaProps {
+  userRole: string;
+}
+
+// --- FIX 2: Update the component to accept the props ---
+const Dashboarda = ({ userRole }: DashboardaProps) => {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -33,7 +39,6 @@ const Dashboarda = () => {
 
   const fetchUsers = async () => {
     try {
-      // Use the full API_URL for the GET request
       const res = await axios.get(API_URL);
       if (Array.isArray(res.data.users)) {
         setUsers(res.data.users);
@@ -51,7 +56,7 @@ const Dashboarda = () => {
     fetchUsers();
   }, []);
 
-  const handleChange = (key, value) => {
+  const handleChange = (key: string, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
@@ -60,19 +65,16 @@ const Dashboarda = () => {
     if (!name || !email || !password) return;
 
     try {
-      // Use the full API_URL for the POST request
       await axios.post(API_URL, { name, email, password, role });
       setForm({ name: "", email: "", password: "", role: "manager" });
       fetchUsers();
     } catch (err) {
       console.error("Failed to create user:", err);
-      // You can add logic here to show the error message to the user on the UI
     }
   };
 
-  const handleRevoke = async email => {
+  const handleRevoke = async (email: string) => {
     try {
-      // Use the full API_URL and append the email for the DELETE request
       await axios.delete(`${API_URL}/${encodeURIComponent(email)}`);
       fetchUsers();
     } catch (err) {
@@ -85,11 +87,11 @@ const Dashboarda = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Admin Panel</h1>
-          <p className="text-muted-foreground">Manage team roles and access</p>
+          {/* You can optionally display the role for confirmation */}
+          <p className="text-muted-foreground">Manage team roles and access (Role: {userRole})</p>
         </div>
       </div>
 
-      {/* Your Card components for creating and listing users remain unchanged */}
       <Card className="animate-slide-up shadow-elegant">
         <CardHeader>
           <CardTitle>Create new employee account</CardTitle>
@@ -144,7 +146,7 @@ const Dashboarda = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           {users && users.length > 0 ? (
-            users.map(user => (
+            users.map((user: { email: string; name: string; role: string }) => (
               <div
                 key={user.email}
                 className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"

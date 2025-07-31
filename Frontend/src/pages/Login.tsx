@@ -63,7 +63,13 @@ const Login = () => {
       // Redirect based on role
       if (decoded.role === "manager") {
         navigate("/dashboardm");
-      } else {
+      } 
+
+      else if (decoded.role === "staff") {
+        navigate("/dashboards");
+      } 
+      
+      else {
         navigate("/dashboarda");
       }
     } catch (error: any) {
