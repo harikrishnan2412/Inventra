@@ -119,3 +119,89 @@ exports.getTopProducts = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch top products" });
   }
 };
+
+exports.getWeeklySalesRevenue = async (req, res) => {
+  try {
+    const result = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const day = new Date();
+      day.setDate(day.getDate() - i);
+      const dayStart = new Date(day.setHours(0, 0, 0, 0));
+      const dayEnd = new Date(day.setHours(23, 59, 59, 999));
+
+      const { data: orders, error } = await supabase
+        .from("orders")
+        .select("total_amount")
+        .gte("created_at", dayStart.toISOString())
+        .lte("created_at", dayEnd.toISOString())
+        .eq("status", "completed");
+
+      if (error) throw error;
+
+      const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+
+      result.push({
+        date: dayStart.toISOString().split("T")[0],  // Inline formatting
+        totalRevenue
+      });
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch weekly sales revenue." });
+  }
+};
+
+exports.getWeeklyProductsSold = async (req, res) => {
+  try {
+    const result = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const day = new Date();
+      day.setDate(day.getDate() - i);
+      const dayStart = new Date(day.setHours(0, 0, 0, 0));
+      const dayEnd = new Date(day.setHours(23, 59, 59, 999));
+
+      const { data: orders, error: orderErr } = await supabase
+        .from("orders")
+        .select("id")
+        .gte("created_at", dayStart.toISOString())
+        .lte("created_at", dayEnd.toISOString())
+        .eq("status", "completed");
+
+      if (orderErr) throw orderErr;
+
+      const orderIds = orders.map(order => order.id);
+
+      if (orderIds.length === 0) {
+        result.push({
+          date: dayStart.toISOString().split("T")[0], 
+          totalProductsSold: 0
+        });
+        continue;
+      }
+
+      const { data: orderItems, error: itemErr } = await supabase
+        .from("order_items")
+        .select("quantity")
+        .in("order_id", orderIds);
+
+      if (itemErr) throw itemErr;
+
+      const totalProductsSold = orderItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+      result.push({
+        date: dayStart.toISOString().split("T")[0], 
+        totalProductsSold
+      });
+    }
+
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch weekly products sold." });
+  }
+};
+
