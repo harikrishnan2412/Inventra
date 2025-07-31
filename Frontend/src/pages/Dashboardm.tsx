@@ -305,9 +305,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
                         Stock: {item.stock} / Threshold: {item.threshold}
                       </p>
                     </div>
-                    <Button size="sm" variant="destructive">
-                      Reorder
-                    </Button>
+                   
                   </div>
                 ))}
               </div>
