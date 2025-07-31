@@ -12,8 +12,12 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.53.0",
     "cloudinary": "^2.7.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "supabase": "^2.33.7"
+    "multer": "^2.0.2",
+    "streamifier": "^0.1.1",
+    "supabase": "^2.33.7",
+    "uuid": "^11.1.0"
   }
 }

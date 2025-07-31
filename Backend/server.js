@@ -1,10 +1,10 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
 
-import userRoutes from './routes/userRoutes.js';
-import orderRoutes from './routes/orderRoutes.js';
-import inventoryRoutes from './routes/inventoryRoutes.js';
+// const userRoutes = require('./routes/userRoutes');
+// const orderRoutes = require('./routes/orderRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
 
 dotenv.config();
 
@@ -14,8 +14,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-app.use('/app/user', userRoutes);
-app.use('/app/order', orderRoutes);
+// app.use('/app/user', userRoutes);
+// app.use('/app/order', orderRoutes);
 app.use('/app/inventory', inventoryRoutes);
 
 app.listen(PORT, () => {
