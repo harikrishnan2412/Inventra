@@ -1,4 +1,3 @@
-import axios from "axios";
 import { jwtDecode, JwtPayload } from "jwt-decode";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -14,8 +13,9 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Package, Eye, EyeOff } from "lucide-react";
+import { authAPI } from "@/lib/api";
 
-// Define a new type for the decoded token that includes your custom fields
+
 interface MyToken extends JwtPayload {
   name: string;
   email: string;
@@ -35,24 +35,15 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Corrected the URL to match your backend route (/app/auth/login)
-      const response = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        {
-          email,
-          password,
-        }
-      );
-
+      const response = await authAPI.login(email, password);
       const { token } = response.data;
 
-      // Save token to localStorage
       localStorage.setItem("token", token);
 
-      // Use the <MyToken> type to let TypeScript know the shape of the decoded object
+      
       const decoded = jwtDecode<MyToken>(token);
 
-      // Store user info if needed
+     
       localStorage.setItem("user", JSON.stringify(decoded));
 
       toast({
@@ -60,15 +51,13 @@ const Login = () => {
         description: "Welcome to Inventory Management System!",
       });
 
-      // Redirect based on role
+      
       if (decoded.role === "manager") {
         navigate("/dashboardm");
       } 
-
       else if (decoded.role === "staff") {
         navigate("/dashboards");
       } 
-      
       else {
         navigate("/dashboarda");
       }

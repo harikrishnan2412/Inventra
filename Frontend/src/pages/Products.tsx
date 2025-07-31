@@ -39,23 +39,24 @@ import {
   AlertTriangle,
   Filter,
   Download,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Loader2
 } from "lucide-react";
+import { inventoryAPI } from "@/lib/api";
 
 interface Product {
-  id: number;
+  id: string;
   name: string;
-  code: string;
-  quantity_in_stock: number;
+  description?: string;
   price: number;
-  category_id: number;
-  category_name?: string;
-  image_url: string;
+  stock_quantity: number;
+  category?: string;
+  image_url?: string;
   created_at: string;
 }
 
 interface Category {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -68,14 +69,16 @@ const Products = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
+    id: "",
     name: "",
-    code: "",
-    quantity_in_stock: 0,
+    description: "",
     price: 0,
-    category_id: "",
+    stock_quantity: 0,
+    category: "",
     image_url: ""
   });
 
@@ -85,50 +88,36 @@ const Products = () => {
   }, []);
 
   const fetchProducts = async () => {
-    setProducts([
-      {
-        id: 1,
-        name: "iPhone 15 Pro",
-        code: "IPH15PRO",
-        quantity_in_stock: 5,
-        price: 999.99,
-        category_id: 1,
-        category_name: "Electronics",
-        image_url: "",
-        created_at: "2024-01-01"
-      },
-      {
-        id: 2,
-        name: "MacBook Air M2",
-        code: "MBA-M2",
-        quantity_in_stock: 3,
-        price: 1199.99,
-        category_id: 1,
-        category_name: "Electronics",
-        image_url: "",
-        created_at: "2024-01-02"
-      },
-      {
-        id: 3,
-        name: "Nike Air Force 1",
-        code: "NAF1-WHT",
-        quantity_in_stock: 25,
-        price: 129.99,
-        category_id: 2,
-        category_name: "Footwear",
-        image_url: "",
-        created_at: "2024-01-03"
-      }
-    ]);
+    setIsFetching(true);
+    try {
+      const response = await inventoryAPI.getAll();
+      setProducts(response.data);
+    } catch (error: any) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch products. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetching(false);
+    }
   };
 
   const fetchCategories = async () => {
-    setCategories([
-      { id: 1, name: "Electronics" },
-      { id: 2, name: "Footwear" },
-      { id: 3, name: "Clothing" },
-      { id: 4, name: "Accessories" }
-    ]);
+    try {
+      const response = await inventoryAPI.getCategories();
+      setCategories(response.data);
+    } catch (error: any) {
+      console.error('Error fetching categories:', error);
+      // Fallback to mock categories if API fails
+      setCategories([
+        { id: "1", name: "Electronics" },
+        { id: "2", name: "Footwear" },
+        { id: "3", name: "Clothing" },
+        { id: "4", name: "Accessories" }
+      ]);
+    }
   };
 
   const generateAlphanumericCode = (length: number) => {
@@ -143,18 +132,14 @@ const Products = () => {
   const handleAddProduct = async () => {
     setIsLoading(true);
     try {
-      const newProduct = {
-        id: Date.now(),
+      const productData = {
         ...formData,
-        code: generateAlphanumericCode(8), // Generate 8-digit alphanumeric code
-        quantity_in_stock: Number(formData.quantity_in_stock),
         price: Number(formData.price),
-        category_id: Number(formData.category_id),
-        category_name: categories.find(c => c.id === Number(formData.category_id))?.name || "",
-        created_at: new Date().toISOString()
+        stock_quantity: Number(formData.stock_quantity),
       };
       
-      setProducts([...products, newProduct]);
+      const response = await inventoryAPI.create(productData);
+      await fetchProducts(); // Refresh the list
       setIsAddModalOpen(false);
       resetForm();
       
@@ -162,10 +147,11 @@ const Products = () => {
         title: "Product added",
         description: "New product has been successfully added.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error adding product:', error);
       toast({
         title: "Error",
-        description: "Failed to add product. Please try again.",
+        description: error.response?.data?.message || "Failed to add product. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -178,20 +164,14 @@ const Products = () => {
     
     setIsLoading(true);
     try {
-      const updatedProducts = products.map(product =>
-        product.id === editingProduct.id
-          ? {
-              ...product,
-              ...formData,
-              quantity_in_stock: Number(formData.quantity_in_stock),
-              price: Number(formData.price),
-              category_id: Number(formData.category_id),
-              category_name: categories.find(c => c.id === Number(formData.category_id))?.name || ""
-            }
-          : product
-      );
+      const productData = {
+        ...formData,
+        price: Number(formData.price),
+        stock_quantity: Number(formData.stock_quantity),
+      };
       
-      setProducts(updatedProducts);
+      await inventoryAPI.update(editingProduct.id, productData);
+      await fetchProducts(); // Refresh the list
       setIsEditModalOpen(false);
       setEditingProduct(null);
       resetForm();
@@ -200,10 +180,11 @@ const Products = () => {
         title: "Product updated",
         description: "Product has been successfully updated.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error updating product:', error);
       toast({
         title: "Error",
-        description: "Failed to update product. Please try again.",
+        description: error.response?.data?.message || "Failed to update product. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -211,18 +192,22 @@ const Products = () => {
     }
   };
 
-  const handleDeleteProduct = async (productId: number) => {
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+    
     try {
-      setProducts(products.filter(product => product.id !== productId));
+      await inventoryAPI.delete(productId);
+      await fetchProducts(); // Refresh the list
       
       toast({
         title: "Product deleted",
         description: "Product has been successfully deleted.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
       toast({
         title: "Error",
-        description: "Failed to delete product. Please try again.",
+        description: error.response?.data?.message || "Failed to delete product. Please try again.",
         variant: "destructive",
       });
     }
@@ -230,11 +215,12 @@ const Products = () => {
 
   const resetForm = () => {
     setFormData({
+      id: "",
       name: "",
-      code: "",
-      quantity_in_stock: 0,
+      description: "",
       price: 0,
-      category_id: "",
+      stock_quantity: 0,
+      category: "",
       image_url: ""
     });
   };
@@ -242,20 +228,22 @@ const Products = () => {
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
     setFormData({
+      id: product.id,
       name: product.name,
-      code: product.code,
-      quantity_in_stock: product.quantity_in_stock,
+      description: product.description || "",
       price: product.price,
-      category_id: product.category_id.toString(),
-      image_url: product.image_url
+      stock_quantity: product.stock_quantity,
+      category: product.category || "",
+      image_url: product.image_url || ""
     });
     setIsEditModalOpen(true);
   };
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || product.category_id.toString() === selectedCategory;
+                         product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         product.category?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || product.category?.toLowerCase() === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -312,8 +300,8 @@ const Products = () => {
                     <Input
                       id="quantity"
                       type="number"
-                      value={formData.quantity_in_stock}
-                      onChange={(e) => setFormData({...formData, quantity_in_stock: Number(e.target.value)})}
+                      value={formData.stock_quantity}
+                      onChange={(e) => setFormData({...formData, stock_quantity: Number(e.target.value)})}
                       placeholder="0"
                     />
                   </div>
@@ -331,13 +319,13 @@ const Products = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
-                  <Select value={formData.category_id} onValueChange={(value) => setFormData({...formData, category_id: value})}>
+                  <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
+                        <SelectItem key={category.id} value={category.id}>
                           {category.name}
                         </SelectItem>
                       ))}
@@ -380,63 +368,79 @@ const Products = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map((product) => {
-                const stockStatus = getStockStatus(product.quantity_in_stock);
-                return (
-                  <TableRow key={product.id} className="hover:bg-muted/50">
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                          {product.image_url ? (
-                            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-lg" />
-                          ) : (
-                            <ImageIcon className="w-5 h-5 text-muted-foreground" />
+              {isFetching ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <p className="mt-2">Loading products...</p>
+                  </TableCell>
+                </TableRow>
+              ) : filteredProducts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8">
+                    <AlertTriangle className="w-10 h-10 text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground">No products found.</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredProducts.map((product) => {
+                  const stockStatus = getStockStatus(product.stock_quantity);
+                  return (
+                    <TableRow key={product.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                            {product.image_url ? (
+                              <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-lg" />
+                            ) : (
+                              <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-sm text-muted-foreground">ID: {product.id}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono">{product.id}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {product.stock_quantity < 10 && (
+                            <AlertTriangle className="w-4 h-4 text-warning" />
                           )}
+                          {product.stock_quantity}
                         </div>
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-sm text-muted-foreground">ID: {product.id}</p>
+                      </TableCell>
+                      <TableCell>${product.price.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge variant={stockStatus.variant as any}>
+                          {stockStatus.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditModal(product)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono">{product.code}</TableCell>
-                    <TableCell>{product.category_name}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {product.quantity_in_stock < 10 && (
-                          <AlertTriangle className="w-4 h-4 text-warning" />
-                        )}
-                        {product.quantity_in_stock}
-                      </div>
-                    </TableCell>
-                    <TableCell>${product.price.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant={stockStatus.variant as any}>
-                        {stockStatus.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditModal(product)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -465,8 +469,8 @@ const Products = () => {
               <Label htmlFor="edit-code">Product Code (SKU)</Label>
               <Input
                 id="edit-code"
-                value={formData.code}
-                onChange={(e) => setFormData({...formData, code: e.target.value})}
+                value={formData.id}
+                onChange={(e) => setFormData({...formData, id: e.target.value})}
                 placeholder="Enter product code"
               />
             </div>
@@ -476,8 +480,8 @@ const Products = () => {
                 <Input
                   id="edit-quantity"
                   type="number"
-                  value={formData.quantity_in_stock}
-                  onChange={(e) => setFormData({...formData, quantity_in_stock: Number(e.target.value)})}
+                  value={formData.stock_quantity}
+                  onChange={(e) => setFormData({...formData, stock_quantity: Number(e.target.value)})}
                   placeholder="0"
                 />
               </div>
@@ -495,13 +499,13 @@ const Products = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-category">Category</Label>
-              <Select value={formData.category_id} onValueChange={(value) => setFormData({...formData, category_id: value})}>
+              <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id.toString()}>
+                    <SelectItem key={category.id} value={category.id}>
                       {category.name}
                     </SelectItem>
                   ))}

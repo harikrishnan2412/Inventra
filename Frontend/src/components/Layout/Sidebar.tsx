@@ -31,7 +31,13 @@ const Sidebar = ({ userRole }: SidebarProps) => {
       icon: BarChart3,
       label: "Dashboard",
       path: "/dashboardm",
-      roles: [ "manager", "staff"]
+      roles: [ "manager"]
+    },
+    {
+      icon: BarChart3,
+      label: "Dashboard",
+      path: "/dashboards",
+      roles: [ "staff"]
     },
     {
       icon: Package,

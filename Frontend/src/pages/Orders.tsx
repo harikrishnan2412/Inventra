@@ -1,26 +1,82 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Plus, Search, Filter } from "lucide-react";
+import { ShoppingCart, Plus, Search, Filter, Loader2, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { orderAPI } from "@/lib/api";
+
+interface Order {
+  id: string;
+  customer_name: string;
+  customer_email?: string;
+  customer_phone?: string;
+  total_amount: number;
+  status: "pending" | "completed" | "cancelled";
+  items: any[];
+  created_at: string;
+}
 
 const Orders = () => {
-  const [orders, setOrders] = useState([
-    { id: '#ORD001', customer: 'Hari', status: 'completed', amount: 299.99, date: '2024-01-15' },
-    { id: '#ORD002', customer: 'ashwin', status: 'pending', amount: 149.50, date: '2024-01-14' },
-    { id: '#ORD003', customer: 'Suhana', status: 'cancelled', amount: 599.99, date: '2024-01-13' },
-    { id: '#ORD004', customer: 'nikith', status: 'pending', amount: 75.00, date: '2024-01-12' }
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "completed" | "cancelled">("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const { toast } = useToast();
 
-  const handleUpdateOrderStatus = (orderId: string, newStatus: "completed" | "cancelled") => {
-    setOrders(prevOrders =>
-      prevOrders.map(order =>
-        order.id === orderId ? { ...order, status: newStatus } : order
-      )
-    );
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    setIsFetching(true);
+    try {
+      const response = await orderAPI.getAll();
+      // The backend returns { orders: [...] } structure
+      setOrders(response.data.orders || []);
+    } catch (error: any) {
+      console.error('Error fetching orders:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch orders. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetching(false);
+    }
   };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: "completed" | "cancelled") => {
+    setIsLoading(true);
+    try {
+      await orderAPI.updateStatus(orderId, newStatus);
+      await fetchOrders(); // Refresh the list
+      
+      toast({
+        title: "Order updated",
+        description: `Order status has been updated to ${newStatus}.`,
+      });
+    } catch (error: any) {
+      console.error('Error updating order:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to update order status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredOrders = orders.filter(order => {
+    const matchesSearch = order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || order.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -43,7 +99,12 @@ const Orders = () => {
           <div className="flex gap-4 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Search orders..." className="pl-10" />
+              <Input 
+                placeholder="Search orders..." 
+                className="pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <Button variant="outline">
               <Filter className="w-4 h-4 mr-2" />
@@ -81,43 +142,61 @@ const Orders = () => {
 
       <Card className="shadow-elegant">
         <CardHeader>
-          <CardTitle>Orders ({orders.filter(order => filterStatus === "all" ? true : order.status === filterStatus).length})</CardTitle>
+          <CardTitle>Orders ({filteredOrders.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {orders.filter(order => filterStatus === "all" ? true : order.status === filterStatus).map((order) => (
-              <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium">{order.id}</p>
-                  <p className="text-sm text-muted-foreground">{order.customer}</p>
+          {isFetching ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              <p className="ml-2">Loading orders...</p>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <AlertTriangle className="w-10 h-10 text-muted-foreground mb-2" />
+              <p className="text-muted-foreground">No orders found.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredOrders.map((order) => (
+                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{order.id}</p>
+                    <p className="text-sm text-muted-foreground">{order.customer_name}</p>
+                    {order.customer_email && (
+                      <p className="text-xs text-muted-foreground">{order.customer_email}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">${order.total_amount.toFixed(2)}</p>
+                    <Badge variant={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'warning' : 'destructive' as any}>
+                      {order.status}
+                    </Badge>
+                    {order.status === "pending" && (
+                      <div className="flex gap-2 mt-2 justify-end">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleUpdateOrderStatus(order.id, "completed")}
+                          disabled={isLoading}
+                        >
+                          Complete
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleUpdateOrderStatus(order.id, "cancelled")}
+                          disabled={isLoading}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">${order.amount}</p>
-                  <Badge variant={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'warning' : 'destructive' as any}>
-                    {order.status}
-                  </Badge>
-                  {order.status === "pending" && (
-                    <div className="flex gap-2 mt-2 justify-end">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUpdateOrderStatus(order.id, "completed")}
-                      >
-                        Complete
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleUpdateOrderStatus(order.id, "cancelled")}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
