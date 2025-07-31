@@ -131,12 +131,22 @@ const Products = () => {
     ]);
   };
 
+  const generateAlphanumericCode = (length: number) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
   const handleAddProduct = async () => {
     setIsLoading(true);
     try {
       const newProduct = {
         id: Date.now(),
         ...formData,
+        code: generateAlphanumericCode(8), // Generate 8-digit alphanumeric code
         quantity_in_stock: Number(formData.quantity_in_stock),
         price: Number(formData.price),
         category_id: Number(formData.category_id),
@@ -295,15 +305,7 @@ const Products = () => {
                     placeholder="Enter product name"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="code">Product Code (SKU)</Label>
-                  <Input
-                    id="code"
-                    value={formData.code}
-                    onChange={(e) => setFormData({...formData, code: e.target.value})}
-                    placeholder="Enter product code"
-                  />
-                </div>
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity</Label>

@@ -22,6 +22,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
   if (!user) return null;
 
+  console.log("User object in AppLayout:", user); // Debugging line
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar userRole={user.role} />
