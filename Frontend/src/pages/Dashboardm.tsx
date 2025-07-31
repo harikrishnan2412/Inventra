@@ -143,7 +143,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
   };
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-9 space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -173,7 +173,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
                     <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className={`text-sm ${stat.changeType === "increase" ? "text-green-600" : stat.changeType === "warning" ? "text-red-600" : "text-muted-foreground"}`}>
+                    <p className={`text-sm ${stat.changeType === "increase" ? "text-green-600" : stat.changeType === "warning" ? "text-blue-600" : "text-muted-foreground"}`}>
                       {stat.change} from last month
                     </p>
                   </div>
