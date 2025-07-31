@@ -49,6 +49,6 @@ Inventra is an inventory management system designed to streamline operations for
 
 *   Harikrishnan B
 *   Ashwin S
-*   Suhana Sulfekker
+*   Suhana Sulfeekker
 *   Nikhil M
 *   Nikith Rajan
