@@ -23,10 +23,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell
+  Tooltip
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 
@@ -62,10 +59,10 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
   ]);
 
   const [recentOrders] = useState([
-    { id: "#ORD001", customer: "John Doe", status: "completed", amount: 299.99, time: "2 hours ago" },
-    { id: "#ORD002", customer: "Jane Smith", status: "pending", amount: 149.5, time: "4 hours ago" },
-    { id: "#ORD003", customer: "Bob Johnson", status: "processing", amount: 599.99, time: "6 hours ago" },
-    { id: "#ORD004", customer: "Alice Brown", status: "completed", amount: 79.99, time: "8 hours ago" }
+    { id: "#ORD001", customer: "nikith", status: "completed", amount: 299.99, time: "2 hours ago" },
+    { id: "#ORD002", customer: "suhana", status: "pending", amount: 149.5, time: "4 hours ago" },
+    { id: "#ORD003", customer: "nikhil", status: "processing", amount: 599.99, time: "6 hours ago" },
+    { id: "#ORD004", customer: "ashwin", status: "completed", amount: 79.99, time: "8 hours ago" }
   ]);
 
   const [lowStockItems] = useState([
@@ -74,6 +71,26 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
     { name: "prod3", stock: 8, threshold: 15 },
     { name: "prod4", stock: 2, threshold: 8 }
   ]);
+
+  const [view, setView] = useState<"daily" | "weekly">("daily");
+
+  const dailyTopSoldProducts = [
+    { name: "Wireless Mouse", amount: 120 },
+    { name: "USB-C Hub", amount: 90 },
+    { name: "Mechanical Keyboard", amount: 75 },
+    { name: "Monitor Stand", amount: 60 },
+    { name: "Webcam 1080p", amount: 50 },
+  ];
+
+  const weeklyTopSoldProducts = [
+    { name: "Laptop Pro X", amount: 350 },
+    { name: "External SSD 1TB", amount: 280 },
+    { name: "Noise-Cancelling Headphones", amount: 220 },
+    { name: "Smartwatch Series 5", amount: 180 },
+    { name: "Gaming Chair", amount: 150 },
+  ];
+
+  const topSoldProducts = view === "daily" ? dailyTopSoldProducts : weeklyTopSoldProducts;
 
   useEffect(() => {
     setStats({
@@ -214,33 +231,43 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
             </CardContent>
           </Card>
         )}
+        <Card className="animate-slide-up shadow-elegant">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle>Top Sold Products</CardTitle>
+            <div className="flex space-x-2">
+              <Button
+                variant={view === "daily" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setView("daily")}
+              >
+                Daily
+              </Button>
+              <Button
+                variant={view === "weekly" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setView("weekly")}
+              >
+                Weekly
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {topSoldProducts.map((product, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <p className="text-sm font-medium">{product.name}</p>
+                  <p className="text-sm text-muted-foreground">{product.amount} sold</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        
 
-        {(userRole === "admin" || userRole === "manager") && (
-          <Card className="animate-slide-up shadow-elegant">
-            <CardHeader>
-              <CardTitle>Product Categories</CardTitle>
-              <CardDescription>Distribution by category</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={categoryData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    dataKey="value"
-                  >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+
+
+
+
       </div>
 
       {/* Orders + Low Stock */}
