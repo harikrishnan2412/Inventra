@@ -1,4 +1,4 @@
-const supabase = require("../config/supabaseClient");
+const supabase = require("../database/supabaseClient");
 
 exports.addOrder = async (req, res) => {
   try {
@@ -168,8 +168,6 @@ exports.markOrderCompleted = async (req, res) => {
 
   res.json({ message: 'Order marked as completed' });
 };
-
-const supabase = require("../supabase");
 
 exports.cancelOrder = async (req, res) => {
   const { order_id } = req.body;
