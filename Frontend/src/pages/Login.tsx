@@ -1,12 +1,26 @@
-import { supabase } from "@/lib/supabase";
+import axios from "axios";
+import { jwtDecode, JwtPayload } from "jwt-decode";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Package, Eye, EyeOff } from "lucide-react";
+
+// Define a new type for the decoded token that includes your custom fields
+interface MyToken extends JwtPayload {
+  name: string;
+  email: string;
+  role: string;
+}
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -21,38 +35,42 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-  email,
-  password,
-});
+      // Corrected the URL to match your backend route (/app/auth/login)
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        {
+          email,
+          password,
+        }
+      );
 
-if (error) {
-  throw error;
-}
+      const { token } = response.data;
 
-// You can store user info in localStorage if needed
-localStorage.setItem('user', JSON.stringify(data.user));
+      // Save token to localStorage
+      localStorage.setItem("token", token);
 
-// Optionally: get user role from your DB if you're using RLS or custom roles
+      // Use the <MyToken> type to let TypeScript know the shape of the decoded object
+      const decoded = jwtDecode<MyToken>(token);
 
-toast({
-  title: "Login successful",
-  description: "Welcome to Inventory Management System!",
-});
+      // Store user info if needed
+      localStorage.setItem("user", JSON.stringify(decoded));
 
-navigate('/dashboardm');
-
-      
       toast({
         title: "Login successful",
         description: "Welcome to Inventory Management System!",
       });
-      
-      navigate('/dashboardm');
-    } catch (error) {
+
+      // Redirect based on role
+      if (decoded.role === "manager") {
+        navigate("/dashboardm");
+      } else {
+        navigate("/dashboarda");
+      }
+    } catch (error: any) {
       toast({
         title: "Login failed",
-        description: "Please check your credentials and try again.",
+        description:
+          error.response?.data?.message || "Please check your credentials.",
         variant: "destructive",
       });
     } finally {
