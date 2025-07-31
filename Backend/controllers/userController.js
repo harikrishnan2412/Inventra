@@ -1,5 +1,5 @@
 
-const supabase = require('../config/supabaseClient');
+const supabase = require('../database/supabaseClient');
 const bcrypt = require('bcrypt');
 
 exports.createUser = async (req, res) => {

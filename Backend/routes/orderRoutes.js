@@ -7,9 +7,16 @@ const {
   getAllOrders
 } = require("../controllers/orderController");
 
+//add order
 router.post("/add", addOrder);
+
+//mark order completed
 router.post("/complete", markOrderCompleted);
+
+//cancel an order
 router.post("/cancel", cancelOrder);
+
+//get all orders
 router.get("/getOrders",getAllOrders);
 
 module.exports = router;
