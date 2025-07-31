@@ -1,11 +1,28 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Plus, Search, Filter, Loader2, AlertTriangle } from "lucide-react";
+import { 
+  ShoppingCart, 
+  Search, 
+  Filter, 
+  Download,
+  FileText,
+  Loader2,
+  AlertTriangle
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { orderAPI } from "@/lib/api";
+import { pdfReportGenerator } from "@/lib/pdfReport";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Order {
   id: string;
@@ -20,15 +37,35 @@ interface Order {
 
 const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "completed" | "cancelled">("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isFetching, setIsFetching] = useState(true);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      await pdfReportGenerator.generateDetailedReport();
+      toast({
+        title: "Report Generated",
+        description: "PDF report has been generated and downloaded successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error generating report:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
 
   const fetchOrders = async () => {
     setIsFetching(true);
@@ -74,7 +111,7 @@ const Orders = () => {
     const matchesSearch = order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === "all" || order.status === filterStatus;
+    const matchesStatus = selectedStatus === "all" || order.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -88,10 +125,42 @@ const Orders = () => {
           </h1>
           <p className="text-muted-foreground">Manage customer orders</p>
         </div>
-        <Button variant="gradient">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Order
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <FileText className="w-4 h-4 mr-2" />
+                Generate Report
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Generate Report</DialogTitle>
+                <DialogDescription>
+                  Generate a comprehensive PDF report of all your business data including orders, products, and analytics.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleGenerateReport} 
+                  disabled={isGeneratingReport}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  {isGeneratingReport ? "Generating..." : "Download Report"}
+                  {isGeneratingReport && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <Button variant="gradient">
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            Create Order
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-elegant">
@@ -113,26 +182,26 @@ const Orders = () => {
           </div>
           <div className="flex space-x-2">
             <Button
-              variant={filterStatus === "all" ? "default" : "outline"}
-              onClick={() => setFilterStatus("all")}
+              variant={selectedStatus === "all" ? "default" : "outline"}
+              onClick={() => setSelectedStatus("all")}
             >
               All Orders
             </Button>
             <Button
-              variant={filterStatus === "pending" ? "default" : "outline"}
-              onClick={() => setFilterStatus("pending")}
+              variant={selectedStatus === "pending" ? "default" : "outline"}
+              onClick={() => setSelectedStatus("pending")}
             >
               Pending
             </Button>
             <Button
-              variant={filterStatus === "completed" ? "default" : "outline"}
-              onClick={() => setFilterStatus("completed")}
+              variant={selectedStatus === "completed" ? "default" : "outline"}
+              onClick={() => setSelectedStatus("completed")}
             >
               Completed
             </Button>
             <Button
-              variant={filterStatus === "cancelled" ? "default" : "outline"}
-              onClick={() => setFilterStatus("cancelled")}
+              variant={selectedStatus === "cancelled" ? "default" : "outline"}
+              onClick={() => setSelectedStatus("cancelled")}
             >
               Cancelled
             </Button>
@@ -167,7 +236,7 @@ const Orders = () => {
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">${order.total_amount.toFixed(2)}</p>
+                    <p className="font-medium">₹{order.total_amount.toFixed(2)}</p>
                     <Badge variant={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'warning' : 'destructive' as any}>
                       {order.status}
                     </Badge>
