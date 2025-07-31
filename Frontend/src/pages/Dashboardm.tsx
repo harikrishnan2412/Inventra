@@ -30,11 +30,11 @@ import {
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 
-interface DashboardProps {
+interface DashboardmProps {
   userRole: string;
 }
 
-const Dashboard = ({ userRole }: DashboardProps) => {
+const Dashboardm = ({ userRole }: DashboardmProps) => {
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
@@ -319,4 +319,4 @@ const Dashboard = ({ userRole }: DashboardProps) => {
   );
 };
 
-export default Dashboard;
+export default Dashboardm;
