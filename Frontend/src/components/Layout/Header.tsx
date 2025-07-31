@@ -18,7 +18,7 @@ interface HeaderProps {
 
 const Header = ({ user }: HeaderProps) => {
   return (
-    <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-end">
+    <header className="h-16 bg-card flex items-center justify-end">
       {/* Right section */}
       <div className="flex items-center gap-4">
         <DropdownMenu>
