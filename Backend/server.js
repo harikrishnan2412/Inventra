@@ -9,6 +9,7 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const stockMonitorRoutes= require('./routes/stockMonitorRoutes');
 const salesStatsRoutes= require('./routes/salesStatsRoutes');
 const reportRoutes=require('./routes/reportRoutes')
+const dashboardRoutes = require('./routes/dashboardRoutes');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -26,6 +27,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/report',reportRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.get('/', (req, res) => {
   res.send('API is running successfully');
 });
