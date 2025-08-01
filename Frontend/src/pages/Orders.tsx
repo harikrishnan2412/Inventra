@@ -9,11 +9,14 @@ import {
   Download,
   FileText,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  Minus,
+  X
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { orderAPI } from "@/lib/api";
+import { orderAPI, inventoryAPI } from "@/lib/api";
 import { pdfReportGenerator } from "@/lib/pdfReport";
 import {
   Dialog,
@@ -23,24 +26,363 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Order {
-  id: string;
-  customer_name: string;
-  customer_email?: string;
-  customer_phone?: string;
-  total_amount: number;
+  order_id: number;
+  customer: {
+    id: number;
+    name: string;
+    phone_number: string;
+  } | null;
+  total_price: number;
   status: "pending" | "completed" | "cancelled";
-  items: any[];
-  created_at: string;
+  items: Array<{
+    product_id: number;
+    name: string;
+    code: string;
+    price: number;
+    image_url?: string;
+    quantity: number;
+  }>;
+  order_date: string;
 }
+
+// Create Order Form Component
+const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
+  onSubmit: (data: any) => void;
+  isLoading: boolean;
+  onCancel: () => void;
+}) => {
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [products, setProducts] = useState<Array<{
+    code: string;
+    quantity: number;
+    price?: number;
+    name?: string;
+  }>>([]);
+  const [availableProducts, setAvailableProducts] = useState<Array<{
+    code: string;
+    name: string;
+    price: number;
+    stock_quantity: number;
+  }>>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const { toast } = useToast();
+
+  // Fetch available products on component mount
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await inventoryAPI.getAll();
+        console.log('Raw inventory response:', response); // Debug log
+        
+        // Handle different possible response structures
+        let productsData = [];
+        if (response.data?.products) {
+          productsData = response.data.products;
+        } else if (response.data?.data) {
+          productsData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          productsData = response.data;
+        } else {
+          console.error('Unexpected response structure:', response.data);
+        }
+        
+        console.log('Processed products data:', productsData); // Debug log
+        
+        // Filter for in-stock products and ensure they have required fields
+        const validProducts = productsData.filter((p: any) => {
+          const hasRequiredFields = p.code && p.name && p.price !== undefined;
+          const hasStock = (p.quantity_in_stock || p.stock_quantity || p.quantity || 0) > 0;
+          return hasRequiredFields && hasStock;
+        }).map((p: any) => ({
+          code: p.code,
+          name: p.name,
+          price: parseFloat(p.price),
+          stock_quantity: p.quantity_in_stock || p.stock_quantity || p.quantity || 0
+        }));
+        
+        console.log('Valid products:', validProducts); // Debug log
+        setAvailableProducts(validProducts);
+        
+        if (validProducts.length === 0) {
+          toast({
+            title: "No Products",
+            description: "No products with stock available. Please add products to inventory first.",
+            variant: "destructive",
+          });
+        }
+      } catch (error: any) {
+        console.error('Error fetching products:', error);
+        console.error('Error response:', error.response); // Debug log
+        toast({
+          title: "Error",
+          description: `Failed to load products: ${error.response?.data?.error || error.message}`,
+          variant: "destructive",
+        });
+        setAvailableProducts([]);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    fetchProducts();
+  }, [toast]);
+
+  const addProduct = () => {
+    setProducts([...products, { code: "", quantity: 1 }]);
+  };
+
+  const removeProduct = (index: number) => {
+    setProducts(products.filter((_, i) => i !== index));
+  };
+
+  const updateProduct = (index: number, field: string, value: any) => {
+    const updated = [...products];
+    if (field === 'code') {
+      const selectedProduct = availableProducts.find(p => p.code === value);
+      updated[index] = {
+        ...updated[index],
+        code: value,
+        price: selectedProduct?.price || 0,
+        name: selectedProduct?.name
+      };
+    } else {
+      updated[index] = { ...updated[index], [field]: value };
+    }
+    setProducts(updated);
+  };
+
+  const calculateTotal = () => {
+    return products.reduce((total, product) => total + ((product.price || 0) * product.quantity), 0);
+  };
+
+  const handleSubmit = () => {
+    if (!customerName.trim() || !customerPhone.trim() || products.length === 0) {
+      return;
+    }
+
+    // Validate all products have codes selected
+    const hasInvalidProducts = products.some(p => !p.code);
+    if (hasInvalidProducts) {
+      toast({
+        title: "Error",
+        description: "Please select a product for all items.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate stock availability
+    const stockIssues = products.filter(p => {
+      const availableProduct = availableProducts.find(ap => ap.code === p.code);
+      return !availableProduct || p.quantity > availableProduct.stock_quantity;
+    });
+
+    if (stockIssues.length > 0) {
+      toast({
+        title: "Stock Error",
+        description: "Some products don't have enough stock available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const orderData = {
+      name: customerName.trim(),
+      phone_no: customerPhone.trim(),
+      total_price: calculateTotal(),
+      products: products.map(p => ({
+        code: p.code,
+        quantity: p.quantity
+      }))
+    };
+
+    onSubmit(orderData);
+  };
+
+  return (
+    <div className="max-h-[70vh] overflow-y-auto">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Customer Name *</label>
+          <Input
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            placeholder="Enter customer name"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium mb-1">Phone Number *</label>
+          <Input
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+            placeholder="Enter phone number (e.g., +91-1234567890)"
+            required
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium">Products *</label>
+            <div className="flex gap-2">
+              <span className="text-xs text-muted-foreground">
+                {isLoadingProducts ? "Loading..." : `${availableProducts.length} available`}
+              </span>
+              <Button type="button" size="sm" onClick={addProduct} disabled={isLoadingProducts || availableProducts.length === 0}>
+                <Plus className="w-4 h-4 mr-1" />
+                Add Product
+              </Button>
+            </div>
+          </div>
+          
+          {products.length === 0 && (
+            <p className="text-sm text-muted-foreground mb-2">
+              {isLoadingProducts ? "Loading products..." : "No products added. Click \"Add Product\" to start."}
+            </p>
+          )}
+          
+          <div className="space-y-3">
+            {products.map((product, index) => (
+              <div key={index} className="border p-3 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Product {index + 1}</span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeProduct(index)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Product</label>
+                    <Select
+                      value={product.code}
+                      onValueChange={(value) => updateProduct(index, 'code', value)}
+                      disabled={isLoadingProducts}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingProducts ? "Loading products..." : "Select product"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableProducts.length === 0 && !isLoadingProducts ? (
+                          <div className="p-2 text-sm text-muted-foreground">No products available</div>
+                        ) : (
+                          availableProducts.map((p) => (
+                            <SelectItem key={p.code} value={p.code}>
+                              {p.name} - ₹{p.price} (Stock: {p.stock_quantity})
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Quantity</label>
+                    <div className="flex items-center">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateProduct(index, 'quantity', Math.max(1, product.quantity - 1))}
+                      >
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <Input
+                        type="number"
+                        min="1"
+                        max={availableProducts.find(p => p.code === product.code)?.stock_quantity || 999}
+                        value={product.quantity}
+                        onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
+                        className="mx-1 text-center"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const maxStock = availableProducts.find(p => p.code === product.code)?.stock_quantity || 999;
+                          updateProduct(index, 'quantity', Math.min(maxStock, product.quantity + 1));
+                        }}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                
+                {product.price && (
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    Subtotal: ₹{(product.price * product.quantity).toFixed(2)}
+                    {product.code && (
+                      <span className="ml-2">
+                        (Available: {availableProducts.find(p => p.code === product.code)?.stock_quantity || 0})
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {products.length > 0 && (
+          <div className="border-t pt-3">
+            <div className="flex justify-between items-center text-lg font-semibold">
+              <span>Total Amount:</span>
+              <span>₹{calculateTotal().toFixed(2)}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 pt-4">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button 
+            type="button"
+            onClick={handleSubmit}
+            disabled={isLoading || isLoadingProducts || !customerName.trim() || !customerPhone.trim() || products.length === 0 || products.some(p => !p.code)}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Order"
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isFetching, setIsFetching] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -71,8 +413,7 @@ const Orders = () => {
     setIsFetching(true);
     try {
       const response = await orderAPI.getAll();
-      // The backend returns { orders: [...] } structure
-      setOrders(response.data.orders || []);
+      setOrders(response.data?.orders || []);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       toast({
@@ -80,16 +421,45 @@ const Orders = () => {
         description: "Failed to fetch orders. Please try again.",
         variant: "destructive",
       });
+      setOrders([]);
     } finally {
       setIsFetching(false);
     }
   };
 
-  const handleUpdateOrderStatus = async (orderId: string, newStatus: "completed" | "cancelled") => {
+  const handleCreateOrder = async (orderData: any) => {
+    setIsCreatingOrder(true);
+    try {
+      await orderAPI.create(orderData);
+      await fetchOrders();
+      setIsCreateOrderOpen(false);
+      
+      toast({
+        title: "Order created",
+        description: "New order has been created successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.error || "Failed to create order. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingOrder(false);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: number, newStatus: "completed" | "cancelled") => {
     setIsLoading(true);
     try {
-      await orderAPI.updateStatus(orderId, newStatus);
-      await fetchOrders(); // Refresh the list
+      if (newStatus === "completed") {
+        await orderAPI.markCompleted(orderId);
+      } else {
+        await orderAPI.cancel({ order_id: orderId });
+      }
+      
+      await fetchOrders();
       
       toast({
         title: "Order updated",
@@ -99,7 +469,7 @@ const Orders = () => {
       console.error('Error updating order:', error);
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to update order status. Please try again.",
+        description: error.response?.data?.error || "Failed to update order status. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -108,12 +478,25 @@ const Orders = () => {
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (order.customer?.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (order.customer?.phone_number || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (order.order_id?.toString() || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === "all" || order.status === selectedStatus;
     return matchesSearch && matchesStatus;
   });
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'default'; // Green-ish
+      case 'pending':
+        return 'secondary'; // Yellow-ish
+      case 'cancelled':
+        return 'destructive'; // Red
+      default:
+        return 'outline';
+    }
+  };
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -156,14 +539,31 @@ const Orders = () => {
               </div>
             </DialogContent>
           </Dialog>
-          <Button variant="gradient">
-            <ShoppingCart className="w-4 h-4 mr-2" />
-            Create Order
-          </Button>
+          <Dialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Create Order
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Create New Order</DialogTitle>
+                <DialogDescription>
+                  Create a new order by selecting products and entering customer details.
+                </DialogDescription>
+              </DialogHeader>
+              <CreateOrderForm 
+                onSubmit={handleCreateOrder} 
+                isLoading={isCreatingOrder}
+                onCancel={() => setIsCreateOrderOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      <Card className="shadow-elegant">
+      <Card className="shadow-sm">
         <CardContent className="pt-6">
           <div className="flex gap-4 mb-4">
             <div className="flex-1 relative">
@@ -209,7 +609,7 @@ const Orders = () => {
         </CardContent>
       </Card>
 
-      <Card className="shadow-elegant">
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Orders ({filteredOrders.length})</CardTitle>
         </CardHeader>
@@ -227,25 +627,28 @@ const Orders = () => {
           ) : (
             <div className="space-y-4">
               {filteredOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div key={order.order_id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
-                    <p className="font-medium">{order.id}</p>
-                    <p className="text-sm text-muted-foreground">{order.customer_name}</p>
-                    {order.customer_email && (
-                      <p className="text-xs text-muted-foreground">{order.customer_email}</p>
+                    <p className="font-medium">Order #{order.order_id}</p>
+                    <p className="text-sm text-muted-foreground">{order.customer?.name || "Guest Customer"}</p>
+                    {order.customer?.phone_number && (
+                      <p className="text-xs text-muted-foreground">{order.customer.phone_number}</p>
                     )}
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(order.order_date).toLocaleDateString()}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">₹{order.total_amount.toFixed(2)}</p>
-                    <Badge variant={order.status === 'completed' ? 'success' : order.status === 'pending' ? 'warning' : 'destructive' as any}>
-                      {order.status}
+                    <p className="font-medium">₹{(order.total_price || 0).toFixed(2)}</p>
+                    <Badge variant={getStatusBadgeVariant(order.status)}>
+                      {order.status || "unknown"}
                     </Badge>
                     {order.status === "pending" && (
                       <div className="flex gap-2 mt-2 justify-end">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleUpdateOrderStatus(order.id, "completed")}
+                          onClick={() => handleUpdateOrderStatus(order.order_id, "completed")}
                           disabled={isLoading}
                         >
                           Complete
@@ -253,7 +656,7 @@ const Orders = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleUpdateOrderStatus(order.id, "cancelled")}
+                          onClick={() => handleUpdateOrderStatus(order.order_id, "cancelled")}
                           disabled={isLoading}
                           className="text-destructive hover:text-destructive"
                         >
