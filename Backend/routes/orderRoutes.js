@@ -11,7 +11,7 @@ const {
 router.post("/add", addOrder);
 
 //mark order completed
-router.post("/complete", markOrderCompleted);
+router.put("/complete/:orderId", markOrderCompleted);
 
 //cancel an order
 router.post("/cancel", cancelOrder);

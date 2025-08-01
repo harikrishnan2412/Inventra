@@ -126,14 +126,9 @@ export const orderAPI = {
   create: (orderData: any) => api.post('/orders/add', orderData),
   update: (id: string, orderData: any) => api.put(`/orders/${id}`, orderData),
   delete: (id: string) => api.delete(`/orders/${id}`),
-  updateStatus: (id: string, status: string) => {
-    if (status === 'completed') {
-      return api.post('/orders/complete', { orderId: id });
-    } else if (status === 'cancelled') {
-      return api.post('/orders/cancel', { order_id: id });
-    }
-    return Promise.reject(new Error('Invalid status'));
-  },
+  markCompleted: (orderId: number) => api.put(`/orders/complete/${orderId}`),
+  cancel: (data: { order_id: number }) => api.post('/orders/cancel', data), 
+  
 };
 
 

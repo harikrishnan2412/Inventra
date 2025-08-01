@@ -11,12 +11,12 @@ exports.addOrder = async (req, res) => {
     const codes = products.map((p) => p.code);
     const { data: dbProducts, error: fetchError } = await supabase
       .from('products')
-      .select('id, code, price, quantity_in_stock') 
+      .select('id, code, price, quantity') 
       .in('code', codes);
 
     if (fetchError) {
       console.error('Fetch Product Error:', fetchError);
-      return res.status(500).json({ error: 'Failed to fetch product data' });
+      return res.status(500).json({ error: 'Failed to fetch product data'+fetchError });
     }
 
     let calculatedTotal = 0;
@@ -30,9 +30,9 @@ exports.addOrder = async (req, res) => {
           .json({ error: `Product with code ${p.code} not found` });
       }
 
-      if (p.quantity > dbProduct.quantity_in_stock) { 
+      if (p.quantity > dbProduct.quantity) { 
         return res.status(400).json({
-          error: `Only ${dbProduct.quantity_in_stock} units available for product ${p.code}`,
+          error: `Only ${dbProduct.quantity} units available for product ${p.code}`,
         });
       }
 
@@ -113,11 +113,11 @@ exports.addOrder = async (req, res) => {
 
     for (const item of orderItems) {
       const dbProduct = dbProducts.find((p) => p.id === item.product_id);
-      const newQuantity = dbProduct.quantity_in_stock - item.quantity; 
+      const newQuantity = dbProduct.quantity - item.quantity; 
 
       const { error: updateError } = await supabase
         .from('products')
-        .update({ quantity_in_stock: newQuantity }) 
+        .update({ quantity: newQuantity }) 
         .eq('id', item.product_id);
 
       if (updateError) {
