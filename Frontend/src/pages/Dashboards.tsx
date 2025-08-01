@@ -16,8 +16,10 @@ import {
   AlertTriangle,
   FileDown,
   PlusCircle,
-  Clock
+  Clock,
+  RefreshCw
 } from "lucide-react";
+import { dashboardAPI } from "@/lib/api";
 
 interface Order {
   id: string;
@@ -45,51 +47,56 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
     totalOrders: 0,
   });
 
-  const [orders, setOrders] = useState([
-    { id: '#ORD001', customer: 'nikith', status: 'completed', amount: 2499.99, time: '2 hours ago' },
-    { id: '#ORD002', customer: 'suhana', status: 'pending', amount: 1249.50, time: '4 hours ago' },
-    { id: '#ORD003', customer: 'nikhil', status: 'processing', amount: 4999.99, time: '6 hours ago' },
-    { id: '#ORD004', customer: 'ashwin', status: 'completed', amount: 649.00, time: '8 hours ago' },
-    { id: '#ORD005', customer: 'zara', status: 'cancelled', amount: 329.00, time: '1 day ago' }
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await dashboardAPI.getStats();
+      const data = response.data;
+      
+      setStats({
+        totalProducts: data.stats.totalProducts || 0,
+        totalOrders: data.stats.totalOrders || 0,
+      });
+      
+      setOrders(data.recentOrders || []);
+      setLowStockItems(data.lowStockItems || []);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data');
+      // Fallback to default values
+      setStats({
+        totalProducts: 0,
+        totalOrders: 0,
+      });
+      setOrders([]);
+      setLowStockItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDashboardData = () => {
-      setStats({
-        totalProducts: 1247,
-        totalOrders: 892,
-      });
-      setOrders([
-        { id: '#ORD001', customer: 'nikith', status: 'completed', amount: 2499.99, time: '2 hours ago' },
-        { id: '#ORD002', customer: 'suhana', status: 'pending', amount: 1249.50, time: '4 hours ago' },
-        { id: '#ORD003', customer: 'nikhil', status: 'processing', amount: 4999.99, time: '6 hours ago' },
-        { id: '#ORD004', customer: 'ashwin', status: 'completed', amount: 649.00, time: '8 hours ago' },
-        { id: '#ORD005', customer: 'zara', status: 'cancelled', amount: 329.00, time: '1 day ago' }
-      ]);
-      setLowStockItems([
-        { name: "prod1", stock: 5, threshold: 10 },
-        { name: "prod2", stock: 3, threshold: 5 },
-        { name: "prod3", stock: 8, threshold: 15 },
-        { name: "prod4", stock: 2, threshold: 8 },
-      ]);
-    };
     fetchDashboardData();
   }, []);
 
   const handleCreateOrder = () => {
     console.log("Navigate to create order form");
-    alert("Navigating to the 'Create Order' page...");
+    // Using a console log instead of alert for better development practice
   };
 
   const handleExportByDateRange = () => {
     console.log("Open date range picker for export");
-    alert("Opening date range picker for bill export...");
   };
 
   const handleExportOrderBill = (orderId: string) => {
     console.log(`Exporting bill for order ${orderId}`);
-    alert(`Exporting bill for order ${orderId}...`);
   };
 
   const getStatusColor = (status: Order['status']) => {
@@ -119,20 +126,54 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="p-9 space-y-6 animate-fade-in">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading dashboard data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-9 space-y-6 animate-fade-in">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>Retry</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-9 space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Staff Dashboard</h1>
-          {/* You can optionally display the role for confirmation */}
           <p className="text-muted-foreground">Manage orders and monitor inventory. (Role: {userRole})</p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={fetchDashboardData}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
           <Button variant="outline" onClick={handleExportByDateRange}>
             <FileDown className="w-4 h-4 mr-2" />
             Export Bills by Date
           </Button>
-          <Button variant="gradient" onClick={handleCreateOrder}>
+          <Button onClick={handleCreateOrder}>
             <PlusCircle className="w-4 h-4 mr-2" />
             Create New Order
           </Button>
@@ -163,34 +204,41 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {orders.map(order => (
-                <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
-                      <ShoppingCart className="w-5 h-5 text-primary-foreground" />
+              {orders.length > 0 ? (
+                orders.map(order => (
+                  <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                        <ShoppingCart className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{order.id}</p>
+                        <p className="text-sm text-muted-foreground">{order.customer}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{order.id}</p>
-                      <p className="text-sm text-muted-foreground">{order.customer}</p>
+                    <div className="text-right flex flex-col items-end gap-2">
+                      <p className="font-medium">₹{order.amount.toFixed(2)}</p>
+                      <div className="flex items-center gap-2">
+                         <Badge variant={getStatusColor(order.status) as any}>
+                          {order.status}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {order.time}
+                        </span>
+                        <Button variant="outline" size="icon" className="w-7 h-7" onClick={() => handleExportOrderBill(order.id)}>
+                          <FileDown className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right flex flex-col items-end gap-2">
-                    <p className="font-medium">₹{order.amount}</p>
-                    <div className="flex items-center gap-2">
-                       <Badge variant={getStatusColor(order.status) as any}>
-                        {order.status}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {order.time}
-                      </span>
-                      <Button variant="outline" size="icon" className="w-7 h-7" onClick={() => handleExportOrderBill(order.id)}>
-                        <FileDown className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No recent orders</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
@@ -205,22 +253,26 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {lowStockItems.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800"
-                >
-                  <div>
-                    <p className="font-medium">{item.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Stock: <span className="font-bold text-red-600">{item.stock}</span> / Threshold: {item.threshold}
-                    </p>
+              {lowStockItems.length > 0 ? (
+                lowStockItems.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800"
+                  >
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Stock: <span className="font-bold text-red-600">{item.stock}</span> / Threshold: {item.threshold}
+                      </p>
+                    </div>
                   </div>
-                  <Button variant="secondary" size="sm">
-                    View Product
-                  </Button>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <AlertTriangle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No low stock alerts</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>

@@ -153,4 +153,8 @@ export const reportAPI = {
   downloadReport: (id: string) => api.get(`/report/download/${id}`),
 };
 
+export const dashboardAPI = {
+  getStats: () => api.get('/dashboard/stats'),
+};
+
 export default api; 
