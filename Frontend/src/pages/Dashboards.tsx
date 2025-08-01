@@ -194,9 +194,6 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
                           <Clock className="w-3 h-3" />
                           {order.time}
                         </span>
-                        <Button variant="outline" size="icon" className="w-7 h-7" onClick={() => handleExportOrderBill(order.id)}>
-                          <FileDown className="w-4 h-4" />
-                        </Button>
                       </div>
                     </div>
                   </div>

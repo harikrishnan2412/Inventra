@@ -35,12 +35,6 @@ const Header = ({ user }: HeaderProps) => {
               </div>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuItem>
-              <User className="w-4 h-4 mr-2" />
-              Profile Settings
-            </DropdownMenuItem>
-          </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
