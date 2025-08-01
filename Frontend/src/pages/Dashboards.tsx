@@ -15,9 +15,7 @@ import {
   ShoppingCart,
   AlertTriangle,
   FileDown,
-  PlusCircle,
-  Clock,
-  RefreshCw
+  Clock
 } from "lucide-react";
 import { dashboardAPI } from "@/lib/api";
 
@@ -35,12 +33,10 @@ interface LowStockItem {
   threshold: number;
 }
 
-// --- FIX 1: Define an interface for the component's props ---
 interface DashboardsProps {
   userRole: string;
 }
 
-// --- FIX 2: Update the component to accept the props ---
 const Dashboards = ({ userRole }: DashboardsProps) => {
   const [stats, setStats] = useState({
     totalProducts: 0,
@@ -70,7 +66,6 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Failed to load dashboard data');
-      // Fallback to default values
       setStats({
         totalProducts: 0,
         totalOrders: 0,
@@ -85,15 +80,6 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
-
-  const handleCreateOrder = () => {
-    console.log("Navigate to create order form");
-    // Using a console log instead of alert for better development practice
-  };
-
-  const handleExportByDateRange = () => {
-    console.log("Open date range picker for export");
-  };
 
   const handleExportOrderBill = (orderId: string) => {
     console.log(`Exporting bill for order ${orderId}`);
@@ -159,24 +145,6 @@ const Dashboards = ({ userRole }: DashboardsProps) => {
         <div>
           <h1 className="text-3xl font-bold">Staff Dashboard</h1>
           <p className="text-muted-foreground">Manage orders and monitor inventory. (Role: {userRole})</p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={fetchDashboardData}
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button variant="outline" onClick={handleExportByDateRange}>
-            <FileDown className="w-4 h-4 mr-2" />
-            Export Bills by Date
-          </Button>
-          <Button onClick={handleCreateOrder}>
-            <PlusCircle className="w-4 h-4 mr-2" />
-            Create New Order
-          </Button>
         </div>
       </div>
 

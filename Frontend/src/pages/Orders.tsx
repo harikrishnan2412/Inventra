@@ -5,8 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ShoppingCart, 
   Search, 
-  Filter, 
-  Download,
   FileText,
   Loader2,
   AlertTriangle,
@@ -509,10 +507,6 @@ const Orders = () => {
           <p className="text-muted-foreground">Manage customer orders</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -575,10 +569,6 @@ const Orders = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline">
-              <Filter className="w-4 h-4 mr-2" />
-              Filter
-            </Button>
           </div>
           <div className="flex space-x-2">
             <Button
