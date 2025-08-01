@@ -115,7 +115,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
   }, []);
 
   useEffect(() => {
-    // Recalculate top sold products when view changes
+    
     if (allOrders.length > 0) {
       const newTopProducts = calculateTopSoldProducts(allOrders, view);
       setTopSoldProducts(newTopProducts);
@@ -151,14 +151,14 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
       let includeOrder = false;
 
       if (view === "daily") {
-        // Include orders from today
+      
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const orderDay = new Date(orderDate);
         orderDay.setHours(0, 0, 0, 0);
         includeOrder = orderDay.getTime() === today.getTime();
       } else {
-        // Include orders from the last 7 days
+        
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         includeOrder = orderDate >= weekAgo;
       }
@@ -185,7 +185,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
       }
     });
 
-    // Convert to array and sort by amount
+    
     return Object.values(productSales)
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
@@ -194,7 +194,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
   const fetchDashboardData = async () => {
     setIsLoading(true);
     try {
-      // Fetch all data in parallel
+      
       const [productsResponse, ordersResponse, statsResponse, lowStockResponse] = await Promise.all([
         inventoryAPI.getAll(),
         orderAPI.getAll(),
@@ -203,11 +203,11 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
       ]);
 
       const products = productsResponse.data;
-      const orders = ordersResponse.data.orders || []; // Handle the { orders: [...] } structure
+      const orders = ordersResponse.data.orders || []; 
       const salesStats = statsResponse.data;
-      const lowStockItems = lowStockResponse.data.items || []; // Handle the { items: [...] } structure
+      const lowStockItems = lowStockResponse.data.items || []; 
 
-      // Calculate stats
+      
       const totalProducts = products.length;
       const totalOrders = orders.length;
       const totalRevenue = orders.reduce((sum: number, order: any) => sum + (order.total_price || 0), 0);
@@ -224,7 +224,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
         totalCustomers
       });
 
-      // Set recent orders (last 4)
+     
       setRecentOrders(orders.slice(0, 4).map((order: any) => ({
         id: order.order_id || order.id,
         customer_name: order.customer?.name || 'Unknown',
@@ -233,22 +233,22 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
         created_at: order.order_date || order.created_at
       })));
 
-      // Set all orders for top sold products calculation
+      
       setAllOrders(orders);
 
-      // Calculate top sold products
+    
       const dailyTopProducts = calculateTopSoldProducts(orders, "daily");
       const weeklyTopProducts = calculateTopSoldProducts(orders, "weekly");
       setTopSoldProducts(view === "daily" ? dailyTopProducts : weeklyTopProducts);
 
-      // Set low stock items
+    
       setLowStockItems(lowStockItems.map((item: any) => ({
         name: item.name,
         stock_quantity: item.quantity,
-        threshold: 10 // Default threshold
+        threshold: 10 
       })));
 
-      // Generate sales data based on real order dates
+     
       const generateSalesDataFromOrders = (orders: any[]) => {
         const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const salesData = days.map(day => ({ name: day, sales: 0, orders: 0 }));
@@ -345,13 +345,9 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's what's happening with your business.</p>
+          <p className="text-muted-foreground">Welcome back!</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
-            <Activity className="w-4 h-4 mr-2" />
-            Live View
-          </Button>
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="gradient">
@@ -401,9 +397,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
                         <p className="text-2xl font-bold">{stat.value}</p>
-                        <p className={`text-sm ${stat.changeType === "increase" ? "text-green-600" : stat.changeType === "warning" ? "text-blue-600" : "text-muted-foreground"}`}>
-                          {stat.change} from last month
-                        </p>
+                      
                       </div>
                       <div className={`w-12 h-12 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
                         <Icon className={`w-6 h-6 ${stat.color}`} />
