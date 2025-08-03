@@ -43,7 +43,7 @@ const Sidebar = ({ userRole }: SidebarProps) => {
       icon: Package,
       label: "Products",
       path: "/products",
-      roles: [ "manager"]
+      roles: [ "manager","staff"]
     },
     {
       icon: ShoppingCart,
