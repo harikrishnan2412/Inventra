@@ -2,6 +2,14 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   ShoppingCart, 
   Search, 
@@ -23,6 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -51,6 +60,60 @@ interface Order {
   }>;
   order_date: string;
 }
+// --- HELPER COMPONENT: ORDER DETAILS MODAL ---
+const OrderDetailsModal = ({ order, onClose }: { order: Order | null; onClose: () => void; }) => {
+  if (!order) return null;
+
+  return (
+    <Dialog open={!!order} onOpenChange={onClose}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Order Details #{order.order_id}</DialogTitle>
+          <DialogDescription>
+            Date: {new Date(order.order_date).toLocaleString()}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto p-1">
+          <div>
+            <h3 className="font-semibold mb-2">Customer Details</h3>
+            <p><strong>Name:</strong> {order.customer?.name || "N/A"}</p>
+            <p><strong>Phone:</strong> {order.customer?.phone_number || "N/A"}</p>
+          </div>
+          <div>
+            <h3 className="font-semibold mb-2">Order Items</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="text-right">Subtotal</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(order.items || []).map((item) => (
+                  <TableRow key={item.product_id}>
+                    <TableCell>{item.name}</TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell className="text-right">₹{item.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">₹{(item.price * item.quantity).toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-end font-bold text-lg border-t pt-4">
+            <span className="mr-4">Total:</span>
+            <span>₹{order.total_price.toFixed(2)}</span>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 // Create Order Form Component
 const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
@@ -70,7 +133,7 @@ const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
     code: string;
     name: string;
     price: number;
-    stock_quantity: number;
+    quantity: number;
   }>>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const { toast } = useToast();
@@ -105,7 +168,7 @@ const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
           code: p.code,
           name: p.name,
           price: parseFloat(p.price),
-          stock_quantity: p.quantity_in_stock || p.stock_quantity || p.quantity || 0
+          quantity: p.quantity_in_stock || p.stock_quantity || p.quantity || 0
         }));
         
         console.log('Valid products:', validProducts); // Debug log
@@ -182,7 +245,7 @@ const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
     // Validate stock availability
     const stockIssues = products.filter(p => {
       const availableProduct = availableProducts.find(ap => ap.code === p.code);
-      return !availableProduct || p.quantity > availableProduct.stock_quantity;
+      return !availableProduct || p.quantity > availableProduct.quantity;
     });
 
     if (stockIssues.length > 0) {
@@ -282,7 +345,7 @@ const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
                         ) : (
                           availableProducts.map((p) => (
                             <SelectItem key={p.code} value={p.code}>
-                              {p.name} - ₹{p.price} (Stock: {p.stock_quantity})
+                              {p.name} - ₹{p.price} (Stock: {p.quantity})
                             </SelectItem>
                           ))
                         )}
@@ -304,7 +367,7 @@ const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
                       <Input
                         type="number"
                         min="1"
-                        max={availableProducts.find(p => p.code === product.code)?.stock_quantity || 999}
+                        max={availableProducts.find(p => p.code === product.code)?.quantity || 999}
                         value={product.quantity}
                         onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
                         className="mx-1 text-center"
@@ -314,7 +377,7 @@ const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          const maxStock = availableProducts.find(p => p.code === product.code)?.stock_quantity || 999;
+                          const maxStock = availableProducts.find(p => p.code === product.code)?.quantity || 999;
                           updateProduct(index, 'quantity', Math.min(maxStock, product.quantity + 1));
                         }}
                       >
@@ -329,7 +392,7 @@ const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
                     Subtotal: ₹{(product.price * product.quantity).toFixed(2)}
                     {product.code && (
                       <span className="ml-2">
-                        (Available: {availableProducts.find(p => p.code === product.code)?.stock_quantity || 0})
+                        (Available: {availableProducts.find(p => p.code === product.code)?.quantity || 0})
                       </span>
                     )}
                   </div>
@@ -372,6 +435,8 @@ const CreateOrderForm = ({ onSubmit, isLoading, onCancel }: {
   );
 };
 
+
+
 const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -382,7 +447,7 @@ const Orders = () => {
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const { toast } = useToast();
-
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -495,6 +560,8 @@ const Orders = () => {
         return 'outline';
     }
   };
+
+  
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -638,6 +705,13 @@ const Orders = () => {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => setViewingOrder(order)}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleUpdateOrderStatus(order.order_id, "completed")}
                           disabled={isLoading}
                         >
@@ -661,6 +735,11 @@ const Orders = () => {
           )}
         </CardContent>
       </Card>
+            {/* --- RENDER THE MODAL --- */}
+      <OrderDetailsModal 
+        order={viewingOrder} 
+        onClose={() => setViewingOrder(null)} 
+      />
     </div>
   );
 };

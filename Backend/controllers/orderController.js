@@ -110,21 +110,6 @@ exports.addOrder = async (req, res) => {
       await supabase.from('orders').delete().eq('id', orderId);
       return res.status(500).json({ error: 'Failed to create order items' });
     }
-
-    for (const item of orderItems) {
-      const dbProduct = dbProducts.find((p) => p.id === item.product_id);
-      const newQuantity = dbProduct.quantity - item.quantity; 
-
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ quantity: newQuantity }) 
-        .eq('id', item.product_id);
-
-      if (updateError) {
-        console.error(`CRITICAL: Failed to update quantity for product ID ${item.product_id}. Order ID: ${orderId}`);
-      }
-    }
-
     return res
       .status(201)
       .json({ message: 'Order placed successfully', order_id: orderId });
@@ -135,11 +120,17 @@ exports.addOrder = async (req, res) => {
 };
 
 exports.markOrderCompleted = async (req, res) => {
+  try {
     const { orderId } = req.params;
 
+    // 1. Find the order and its items
     const { data: order, error: findError } = await supabase
       .from('orders')
-      .select('id, status')
+      .select(`
+        id, 
+        status,
+        order_items ( product_id, quantity )
+      `)
       .eq('id', orderId)
       .single();
 
@@ -147,85 +138,94 @@ exports.markOrderCompleted = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    // 2. Check the order status
     if (order.status === 'completed') {
       return res.status(400).json({ error: 'Order is already marked as completed' });
     }
-
-     if (order.status === 'cancelled') {
+    if (order.status === 'cancelled') {
       return res.status(400).json({ error: 'Cannot complete a cancelled order' });
     }
 
+    // 3. Deduct stock for each item in the order
+    for (const item of order.order_items) {
+      // Get the current stock of the product
+      const { data: product, error: productError } = await supabase
+        .from('products')
+        .select('quantity')
+        .eq('id', item.product_id)
+        .single();
+
+      if (productError || !product) {
+        return res.status(500).json({ error: `Could not find product with ID ${item.product_id}` });
+      }
+
+      const newQuantity = product.quantity - item.quantity;
+
+      // Update the product's stock
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ quantity: newQuantity })
+        .eq('id', item.product_id);
+
+      if (updateError) {
+        console.error(`Failed to update stock for product ${item.product_id}:`, updateError);
+        return res.status(500).json({ error: "Failed to update product stock. Order status not changed." });
+      }
+    }
+
+    // 4. Update the order status to 'completed'
     const { error: updateError } = await supabase
       .from('orders')
       .update({ status: 'completed' })
       .eq('id', orderId);
 
     if (updateError) {
-      return res.status(500).json({ error: 'Failed to update order status' });
+      console.error('CRITICAL: Stock deducted but failed to update order status for order ID:', orderId, updateError);
+      return res.status(500).json({ error: 'Failed to update order status after deducting stock.' });
     }
 
-    res.json({ message: 'Order marked as completed' });
+    res.json({ message: 'Order marked as completed and inventory updated.' });
+  } catch(err) {
+    console.error('Unhandled error in markOrderCompleted:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 };
 
 exports.cancelOrder = async (req, res) => {
-  const { order_id } = req.body;
-
-  if (!order_id) {
-    return res.status(400).json({ error: 'Order ID is required' });
-  }
-
   try {
-    const { data: orderData, error: orderError } = await supabase
+    const { order_id } = req.body;
+
+    if (!order_id) {
+      return res.status(400).json({ error: 'Order ID is required' });
+    }
+
+    // 1. Find the order
+    const { data: order, error: findError } = await supabase
       .from('orders')
       .select('status')
       .eq('id', order_id)
       .single();
 
-    if (orderError || !orderData) {
+    if (findError || !order) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    if (orderData.status === 'cancelled') {
-      return res.status(400).json({ error: 'Order is already cancelled' });
-    }
-    if (orderData.status === 'completed') {
-      return res.status(400).json({ error: 'Completed orders cannot be cancelled' });
+    // 2. Check if the order can be cancelled
+    if (order.status === 'completed' || order.status === 'cancelled') {
+      return res.status(400).json({ error: `Order is already ${order.status} and cannot be cancelled.` });
     }
 
-    const { data: orderItems, error: itemsError } = await supabase
-      .from('order_items')
-      .select('product_id, quantity')
-      .eq('order_id', order_id);
-
-    if (itemsError) {
-        return res.status(500).json({ error: "Failed to fetch order items for cancellation." });
-    }
-
-    if (orderItems && orderItems.length > 0) {
-        for (const item of orderItems) {
-            // Use Supabase RPC to safely increment quantity
-            const { error: rpcError } = await supabase.rpc('increment_product_quantity', {
-                p_id: item.product_id,
-                amount: item.quantity
-            });
-
-            if (rpcError) {
-                console.error(`Failed to restore quantity for product ${item.product_id}:`, rpcError);
-                return res.status(500).json({ error: "Failed to update product quantity. Order status not changed." });
-            }
-        }
-    }
-
+    // 3. Update the order status to 'cancelled'
     const { error: cancelError } = await supabase
       .from('orders')
       .update({ status: 'cancelled' })
       .eq('id', order_id);
 
     if (cancelError) {
-      return res.status(500).json({ error: 'Failed to cancel the order after updating inventory.' });
+      return res.status(500).json({ error: 'Failed to cancel the order.' });
     }
 
-    return res.status(200).json({ message: 'Order successfully cancelled and inventory restored.' });
+    return res.status(200).json({ message: 'Order successfully cancelled.' });
   } catch (err) {
     console.error('Unexpected error during cancellation:', err);
     return res.status(500).json({ error: 'Internal server error' });
