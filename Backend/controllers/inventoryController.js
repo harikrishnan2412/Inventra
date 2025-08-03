@@ -41,7 +41,7 @@ const InventoryController = {
   // POST
   async addProduct(req, res) {
     try {
-      const { name, price, quantity, category_id } = req.body;
+      const { name, price, quantity, category: category_id } = req.body;
       const imageFile = req.file;
 
       if (!name || !price || !quantity || !category_id) {
@@ -100,64 +100,46 @@ const InventoryController = {
   },
 
   // PUT
-  async editProduct(req, res) {
-    try {
-      const { code, name, price, quantity, category_id } = req.body;
-      const imageFile = req.file;
+async editProduct(req, res) {
+  try {
+    const { code } = req.params;
+    const { name, price, quantity } = req.body;
 
-      if (!code) {
-        return res.status(400).json({ error: "Missing required field: code" });
-      }
-
-      const updateFields = {};
-      if (name) updateFields.name = name;
-      if (price) {
-        const parsedPrice = parseFloat(price);
-        if (isNaN(parsedPrice)) {
-          return res.status(400).json({ error: "Invalid price" });
-        }
-        updateFields.price = parsedPrice;
-      }
-      if (quantity) {
-        const parsedQty = parseInt(quantity, 10);
-        if (isNaN(parsedQty)) {
-          return res.status(400).json({ error: "Invalid quantity" });
-        }
-        updateFields.quantity = parsedQty;
-      }
-      if (category_id) {
-        const parsedCat = parseInt(category_id, 10);
-        if (isNaN(parsedCat)) {
-          return res.status(400).json({ error: "Invalid category_id" });
-        }
-        updateFields.category_id = parsedCat;
-      }
-
-      if (imageFile) {
-        const result = await cloudinary.uploader.upload(imageFile.path, {
-          folder: "Inventra",
-        });
-        updateFields.image_url = result.secure_url;
-        fs.unlinkSync(imageFile.path);
-      }
-
-      const { data, error } = await supabase
-        .from("products")
-        .update(updateFields)
-        .eq("code", code);
-
-      if (error) {
-        console.error("Supabase update error:", error);
-        return res.status(500).json({ error: error.message });
-      }
-
-      res.json({ message: "Product updated successfully", data });
-    } catch (err) {
-      console.error("Unhandled error in editProduct:", err);
-      res.status(500).json({ error: err.message });
+    if (!code) {
+      return res.status(400).json({ error: "Missing product code" });
     }
-  },
 
+    const updateFields = {};
+    if (name) updateFields.name = name;
+    if (price !== undefined) updateFields.price = parseFloat(price);
+
+    // CORRECTED CHECK FOR QUANTITY
+    if (quantity !== undefined) {
+      updateFields.quantity = parseInt(quantity, 10);
+    }
+
+    const { data, error } = await supabase
+      .from("products")
+      .update(updateFields)
+      .eq("code", code)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase update error:", error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.json({ message: "Product updated successfully", data });
+  } catch (err) {
+    console.error("Unhandled error in editProduct:", err);
+    res.status(500).json({ error: err.message });
+  }
+},
   // DELETE /products/:code
   async deleteProductByCode(req, res) {
     try {

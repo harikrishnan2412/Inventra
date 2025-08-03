@@ -22,7 +22,7 @@ router.get("/all", InventoryController.getAllProducts);
 router.post("/add", upload.single("imageFile"), InventoryController.addProduct);
 
 //edit a product 
-router.put("/edit", upload.single("imageFile"), InventoryController.editProduct);
+router.put("/edit/:code", InventoryController.editProduct);
 
 //delete a product
 router.delete("/delete/:code", InventoryController.deleteProductByCode);

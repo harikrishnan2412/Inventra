@@ -92,8 +92,8 @@ export const inventoryAPI = {
     const formData = new FormData();
     formData.append('name', productData.name);
     formData.append('price', productData.price.toString());
-    formData.append('quantity', productData.stock_quantity.toString());
-    formData.append('category_id', productData.category || '1');
+    formData.append('quantity', productData.quantity.toString());
+    formData.append('category', productData.category || '1');
     if (productData.image_url) {
       formData.append('imageFile', productData.image_url);
     }
@@ -101,21 +101,10 @@ export const inventoryAPI = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  update: (id: string, productData: any) => {
-    const formData = new FormData();
-    formData.append('code', id);
-    formData.append('name', productData.name);
-    formData.append('price', productData.price.toString());
-    formData.append('quantity', productData.stock_quantity.toString());
-    formData.append('category_id', productData.category || '1');
-    if (productData.image_url) {
-      formData.append('imageFile', productData.image_url);
-    }
-    return api.put('/inventory/edit', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
-  delete: (id: string) => api.delete(`/inventory/delete/${id}`),
+  update: (code: string, productData: any) =>
+    api.put(`/inventory/edit/${code}`, productData),
+
+  delete: (code: string) => api.delete(`/inventory/delete/${code}`),
   getCategories: () => api.get('/inventory/all/category'),
 };
 
