@@ -59,7 +59,6 @@ interface Stats {
 interface SalesData {
   name: string;
   sales: number;
-  orders: number;
 }
 
 interface RecentOrder {
@@ -248,25 +247,43 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
         threshold: 10 
       })));
 
-     
-      const generateSalesDataFromOrders = (orders: any[]) => {
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        const salesData = days.map(day => ({ name: day, sales: 0, orders: 0 }));
-        
-        orders.forEach((order: any) => {
-          const orderDate = new Date(order.order_date || order.created_at);
-          const dayIndex = orderDate.getDay();
-          const dayName = days[dayIndex];
-          
-          const salesIndex = salesData.findIndex(item => item.name === dayName);
-          if (salesIndex !== -1) {
-            salesData[salesIndex].sales += order.total_price || 0;
-            salesData[salesIndex].orders += 1;
-          }
-        });
-        
-        return salesData;
-      };
+const generateSalesDataFromOrders = (orders: any[]) => {
+  // Helper function to get local date string "YYYY-MM-DD"
+  const toLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const salesByDate: { [key: string]: { name: string; sales: number } } = {};
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateString = toLocalDateString(date);
+
+    let dayLabel = daysOfWeek[date.getDay()];
+    if (i === 0) dayLabel = "Today";
+    if (i === 1) dayLabel = "Yesterday";
+
+    salesByDate[dateString] = { name: dayLabel, sales: 0 };
+  }
+
+  orders.forEach((order: any) => {
+    if (order.status === 'completed' && order.order_date) {
+      const orderDate = new Date(order.order_date);
+      const orderDateString = toLocalDateString(orderDate);
+      
+      if (salesByDate[orderDateString]) {
+        salesByDate[orderDateString].sales += order.total_price || 0;
+      }
+    }
+  });
+
+  return Object.values(salesByDate).reverse();
+};
       
       const realSalesData = generateSalesDataFromOrders(orders);
       setSalesData(realSalesData);
