@@ -102,11 +102,11 @@ const Login = () => {
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">User</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
