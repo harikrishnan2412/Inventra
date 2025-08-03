@@ -104,6 +104,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const { toast } = useToast();
   const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
+  const [view, setView] = useState<"daily" | "weekly">("daily");
 
   const [categoryData] = useState([
     { name: "Electronics", value: 400, color: "#3b82f6" },
@@ -112,19 +113,54 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
     { name: "Books", value: 200, color: "#f59e0b" }
   ]);
 
-  const [view, setView] = useState<"daily" | "weekly">("daily");
+  
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
   useEffect(() => {
+    if (!allOrders || allOrders.length === 0) return;
+
+    const now = new Date();
+    const toLocalDateString = (date: Date) => {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const todayString = toLocalDateString(now);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Filter orders based on the single 'view' state
+    const relevantOrders = allOrders.filter(order => {
+      const orderDate = new Date(order.order_date);
+      if (view === 'daily') {
+        return toLocalDateString(orderDate) === todayString;
+      } else { // weekly
+        return orderDate >= weekAgo;
+      }
+    });
+
+    // --- Calculate all stats ---
+    const totalOrders = relevantOrders.length;
+    const totalRevenue = relevantOrders
+      .filter(order => order.status === 'completed')
+      .reduce((sum, order) => sum + (order.total_price || 0), 0);
     
-    if (allOrders.length > 0) {
-      const newTopProducts = calculateTopSoldProducts(allOrders, view);
-      setTopSoldProducts(newTopProducts);
-    }
+    const topProducts = calculateTopSoldProducts(relevantOrders); // We'll simplify this function next
+
+    // --- Update all states ---
+    setStats(prevStats => ({
+      ...prevStats,
+      totalOrders,
+      totalRevenue,
+    }));
+    setTopSoldProducts(topProducts);
+
   }, [view, allOrders]);
+
 
   const handleGenerateReport = async () => {
     setIsGeneratingReport(true);
@@ -146,31 +182,15 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
     }
   };
 
-  const calculateTopSoldProducts = (orders: any[], view: "daily" | "weekly") => {
-    const now = new Date();
+  const calculateTopSoldProducts = (orders: any[]) => {
     const productSales: { [key: string]: { name: string; amount: number; quantity: number } } = {};
 
     orders.forEach((order: any) => {
-      const orderDate = new Date(order.order_date || order.created_at);
-      let includeOrder = false;
-
-      if (view === "daily") {
-      
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const orderDay = new Date(orderDate);
-        orderDay.setHours(0, 0, 0, 0);
-        includeOrder = orderDay.getTime() === today.getTime();
-      } else {
-        
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        includeOrder = orderDate >= weekAgo;
-      }
-
-      if (includeOrder && order.items && Array.isArray(order.items)) {
+      // Only process items from completed orders
+      if (order.status === 'completed' && order.items && Array.isArray(order.items)) {
         order.items.forEach((item: any) => {
           const productId = item.product_id || item.id;
-          const productName = item.product_name || item.name || 'Unknown Product';
+          const productName = item.name || 'Unknown Product';
           const quantity = item.quantity || 1;
           const price = item.price || 0;
           const totalAmount = quantity * price;
@@ -182,14 +202,13 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
             productSales[productId] = {
               name: productName,
               amount: totalAmount,
-              quantity: quantity
+              quantity: quantity,
             };
           }
         });
       }
     });
 
-    
     return Object.values(productSales)
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
@@ -239,13 +258,6 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
 
       
       setAllOrders(orders);
-
-    
-      const dailyTopProducts = calculateTopSoldProducts(orders, "daily");
-      const weeklyTopProducts = calculateTopSoldProducts(orders, "weekly");
-      setTopSoldProducts(view === "daily" ? dailyTopProducts : weeklyTopProducts);
-
-    
       setLowStockItems(lowStockItems.map((item: any) => ({
         name: item.name,
         stock_quantity: item.quantity,
@@ -415,16 +427,20 @@ const generateSalesDataFromOrders = (orders: any[]) => {
               return (
                 <Card key={stat.title} className="animate-slide-up shadow-elegant hover:shadow-lg transition-all duration-200" style={{ animationDelay: `${index * 100}ms` }}>
                   <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                        <p className="text-2xl font-bold">{stat.value}</p>
-                      
-                      </div>
+                    
+                    {/* Top Row: Title and Toggle */}
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                    </div>
+
+                    {/* Bottom Row: Value and Icon */}
+                    <div className="flex items-end justify-between">
+                      <p className="text-2xl font-bold">{stat.value}</p>
                       <div className={`w-12 h-12 rounded-lg ${stat.bgColor} flex items-center justify-center`}>
                         <Icon className={`w-6 h-6 ${stat.color}`} />
                       </div>
                     </div>
+                    
                   </CardContent>
                 </Card>
               );

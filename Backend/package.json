@@ -20,6 +20,8 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "multer": "^2.0.2",
     "streamifier": "^0.1.1",
     "supabase": "^2.33.7",

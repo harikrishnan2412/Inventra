@@ -3,7 +3,7 @@ const supabase = require("../database/supabaseClient");
 // API for finding products with quantity lower than threshold value (Currently hardcoded as 5)
 exports.getLowStocks = async (req, res) => {
   try {
-    const THRESHOLD = 5;
+    const THRESHOLD = 10;
 
     const { data: lowStockItems, error } = await supabase
       .from("products")

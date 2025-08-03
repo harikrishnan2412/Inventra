@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { generateOrderBill } from "@/lib/pdfReport";
 import {
   Table,
   TableBody,
@@ -61,7 +62,7 @@ interface Order {
   order_date: string;
 }
 // --- HELPER COMPONENT: ORDER DETAILS MODAL ---
-const OrderDetailsModal = ({ order, onClose }: { order: Order | null; onClose: () => void; }) => {
+const OrderDetailsModal = ({ order, onClose, onDownload }: { order: Order | null; onClose: () => void; onDownload: (order: Order) => void; }) => {
   if (!order) return null;
 
   return (
@@ -109,6 +110,7 @@ const OrderDetailsModal = ({ order, onClose }: { order: Order | null; onClose: (
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button onClick={() => onDownload(order)}>Download</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -686,46 +688,40 @@ const Orders = () => {
               {filteredOrders.map((order) => (
                 <div key={order.order_id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div>
-                    <p className="font-medium">Order #{order.order_id}</p>
-                    <p className="text-sm text-muted-foreground">{order.customer?.name || "Guest Customer"}</p>
+                    <p className="font-medium">Order : {order.order_id}</p>
+                    <p className="text-sm text-muted-foreground">Customer : {order.customer?.name || "Guest Customer"}</p>
                     {order.customer?.phone_number && (
-                      <p className="text-xs text-muted-foreground">{order.customer.phone_number}</p>
+                      <p className="text-xs text-muted-foreground">Phone No. : {order.customer.phone_number}</p>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(order.order_date).toLocaleDateString()}
-                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">₹{(order.total_price || 0).toFixed(2)}</p>
+                    <Badge 
+                      variant="outline" 
+                      className="cursor-pointer" 
+                      onClick={() => setViewingOrder(order)}
+                    >
+                      View
+                    </Badge>
                     <Badge variant={getStatusBadgeVariant(order.status)}>
                       {order.status || "unknown"}
                     </Badge>
                     {order.status === "pending" && (
                       <div className="flex gap-2 mt-2 justify-end">
-                        <Button
-                          size="sm"
+                        <Badge
                           variant="outline"
-                          onClick={() => setViewingOrder(order)}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
+                          className="cursor-pointer" 
                           onClick={() => handleUpdateOrderStatus(order.order_id, "completed")}
-                          disabled={isLoading}
                         >
                           Complete
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
+                        </Badge>
+                        <Badge
+                          variant="outline" 
                           onClick={() => handleUpdateOrderStatus(order.order_id, "cancelled")}
-                          disabled={isLoading}
-                          className="text-destructive hover:text-destructive"
+                          className="cursor-pointer text-destructive hover:text-destructive"
                         >
                           Cancel
-                        </Button>
+                        </Badge>
                       </div>
                     )}
                   </div>
@@ -739,6 +735,7 @@ const Orders = () => {
       <OrderDetailsModal 
         order={viewingOrder} 
         onClose={() => setViewingOrder(null)} 
+        onDownload={generateOrderBill}
       />
     </div>
   );

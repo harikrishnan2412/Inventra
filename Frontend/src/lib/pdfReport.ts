@@ -15,6 +15,75 @@ interface ReportData {
   cancelledOrders: number;
 }
 
+interface jsPDFWithAutoTable extends jsPDF {
+  autoTable: (options: any) => jsPDF;
+}
+
+export const generateOrderBill = (order: any) => {
+  // --- Page Setup ---
+  // Use a custom narrow page size to mimic a receipt
+  const receiptWidth = 80; // in mm
+  const pageHeight = 175; // A4 height
+  const doc = new jsPDF({
+    unit: 'mm',
+    format: [receiptWidth, pageHeight],
+  });
+  
+  // Set a monospaced font like a real receipt
+  doc.setFont("courier", "normal");
+  const leftMargin = 5;
+  const rightMargin = receiptWidth - 5;
+  let currentY = 10;
+
+  // --- Header ---
+  doc.setFontSize(14);
+  doc.text("INVENTRA", receiptWidth / 2, currentY, { align: 'center' });
+  currentY += 5;
+  doc.setFontSize(8);
+  doc.text("Kochi, Kerala", receiptWidth / 2, currentY, { align: 'center' });
+  currentY += 10;
+  
+  doc.text(`Order #: ${order.order_id}`, leftMargin, currentY);
+  doc.text(new Date(order.order_date).toLocaleString(), rightMargin, currentY, { align: 'right' });
+  currentY += 5;
+  
+  doc.text(`Customer: ${order.customer?.name || 'N/A'}`, leftMargin, currentY);
+  currentY += 8;
+
+  // --- Line Separator ---
+  doc.text("---------------------------------", receiptWidth / 2, currentY, { align: 'center' });
+  currentY += 5;
+
+  // --- Items ---
+  (order.items || []).forEach(item => {
+    const itemName = item.name;
+    const subtotal = `Rs${(item.price * item.quantity).toFixed(2)}`;
+    doc.text(itemName, leftMargin, currentY);
+    doc.text(subtotal, rightMargin, currentY, { align: 'right' });
+    currentY += 4;
+    doc.text(`${item.quantity} x Rs${item.price.toFixed(2)}`, leftMargin + 2, currentY);
+    currentY += 6;
+  });
+
+  // --- Line Separator ---
+  doc.text("---------------------------------", receiptWidth / 2, currentY, { align: 'center' });
+  currentY += 6;
+
+  // --- Total ---
+  doc.setFont("courier", "bold");
+  doc.text("TOTAL AMOUNT", leftMargin, currentY);
+  doc.text(`Rs${order.total_price.toFixed(2)}`, rightMargin, currentY, { align: 'right' });
+  currentY += 10;
+
+  // --- Footer ---
+  doc.setFont("courier", "normal");
+  doc.setFontSize(10);
+  doc.text("Thank You!", receiptWidth / 2, currentY, { align: 'center' });
+  
+  // --- Download ---
+  doc.save(`Receipt_Order_${order.order_id}.pdf`);
+};
+
 export class PDFReportGenerator {
   private doc: jsPDF;
 
