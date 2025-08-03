@@ -21,6 +21,10 @@ import {
   Download
 } from "lucide-react";
 import {
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -99,6 +103,7 @@ const Dashboardm = ({ userRole }: DashboardmProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const { toast } = useToast();
+  const [chartType, setChartType] = useState<'bar' | 'pie'>('bar');
 
   const [categoryData] = useState([
     { name: "Electronics", value: 400, color: "#3b82f6" },
@@ -430,26 +435,59 @@ const generateSalesDataFromOrders = (orders: any[]) => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {(userRole === "admin" || userRole === "manager") && (
               <Card className="animate-slide-up shadow-elegant">
-                <CardHeader>
-                  <CardTitle>Sales Overview</CardTitle>
-                  <CardDescription>Daily sales and order trends</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Sales Overview</CardTitle>
+                    <CardDescription>Daily sales and order trends</CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setChartType(chartType === 'bar' ? 'pie' : 'bar')}
+                  >
+                    {chartType === 'bar' ? 'Show Pie Chart' : 'Show Bar Chart'}
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={salesData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px"
-                        }}
-                      />
-                      <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {chartType === 'bar' ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={salesData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px"
+                          }}
+                        />
+                        <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    //pie chart
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={topSoldProducts} // Using your existing top sold products data
+                          dataKey="quantity"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          fill="#8884d8"
+                          label={(entry) => entry.name}
+                        >
+                          {topSoldProducts.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={categoryData[index % categoryData.length].color} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => `${value} units sold`} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </CardContent>
               </Card>
             )}
