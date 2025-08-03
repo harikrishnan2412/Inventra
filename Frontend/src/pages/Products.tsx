@@ -75,6 +75,7 @@ const Products = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const { toast } = useToast();
 
   // UPDATED FORM STATE
@@ -87,6 +88,14 @@ const Products = () => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+  }, []);
+
+  useEffect(() => {
+  const userDataString = localStorage.getItem('user');
+  if (userDataString) {
+    const userData = JSON.parse(userDataString);
+    setUserRole(userData.role);
+  }
   }, []);
 
   const fetchProducts = async () => {
@@ -300,6 +309,7 @@ const Products = () => {
               </div>
             </DialogContent>
           </Dialog>
+          {userRole === 'manager' && (
           <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogTrigger asChild>
               <Button variant="gradient">
@@ -375,6 +385,7 @@ const Products = () => {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 
@@ -396,7 +407,9 @@ const Products = () => {
                 <TableHead>Stock</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {userRole === 'manager' && (
+                  <TableHead className="text-right">Actions</TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -451,6 +464,7 @@ const Products = () => {
                           {stockStatus.label}
                         </Badge>
                       </TableCell>
+                      {userRole === 'manager' && (
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -470,6 +484,7 @@ const Products = () => {
                         </Button>
                         </div>
                       </TableCell>
+                      )}
                     </TableRow>
                   );
                 })
