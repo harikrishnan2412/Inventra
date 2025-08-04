@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -29,6 +31,18 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const reason = searchParams.get('reason');
+    if (reason === 'session_expired') {
+      toast({
+        title: "Session Expired",
+        description: "You have been logged out. Please log in again.",
+        variant: "destructive",
+      });
+    }
+  }, [searchParams, toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from "@/components/ui/use-toast"; // 1. Import the toast function
 
 const api = axios.create({
   baseURL: 'http://localhost:5000/api',
@@ -7,7 +8,6 @@ const api = axios.create({
   },
 });
 
-
 const appApi = axios.create({
   baseURL: 'http://localhost:5000/app',
   headers: {
@@ -15,7 +15,7 @@ const appApi = axios.create({
   },
 });
 
-
+// Request Interceptors (no changes needed here)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -42,39 +42,38 @@ appApi.interceptors.request.use(
   }
 );
 
+// --- 2. UPDATED RESPONSE INTERCEPTORS ---
 
+// This function will be the new error handler for both api instances
+const handleResponseError = (error: any) => {
+  if (error.response?.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Redirect to the login page with a reason
+    window.location.href = '/login?reason=session_expired'; 
+  }
+  return Promise.reject(error);
+};
+
+// Apply the new handler to both axios instances
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
+  handleResponseError // Use the new handler
 );
-
 
 appApi.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
+  handleResponseError // Use the new handler
 );
 
 
+// --- Rest of the file remains the same ---
 export const authAPI = {
   login: (email: string, password: string) =>
     api.post('/auth/login', { email, password }),
   getProfile: () => api.get('/auth/me'),
 };
-
 
 export const userAPI = {
   getAll: () => api.get('/users'),
@@ -83,7 +82,6 @@ export const userAPI = {
   update: (id: string, userData: any) => api.put(`/users/${id}`, userData),
   delete: (id: string) => api.delete(`/users/${id}`),
 };
-
 
 export const inventoryAPI = {
   getAll: () => api.get('/inventory/all'),
@@ -103,11 +101,9 @@ export const inventoryAPI = {
   },
   update: (code: string, productData: any) =>
     api.put(`/inventory/edit/${code}`, productData),
-
   delete: (code: string) => api.delete(`/inventory/delete/${code}`),
   getCategories: () => api.get('/inventory/all/category'),
 };
-
 
 export const orderAPI = {
   getAll: () => api.get('/orders/getOrders'),
@@ -117,9 +113,7 @@ export const orderAPI = {
   delete: (id: string) => api.delete(`/orders/${id}`),
   markCompleted: (orderId: number) => api.put(`/orders/complete/${orderId}`),
   cancel: (data: { order_id: number }) => api.post('/orders/cancel', data), 
-  
 };
-
 
 export const stockMonitorAPI = {
   getLowStock: () => appApi.get('/stockmonitor/low'),
@@ -134,7 +128,6 @@ export const salesStatsAPI = {
   getSalesChart: (period?: string) => appApi.get('/stats/product/week'),
 };
 
-
 export const reportAPI = {
   generateReport: (type: string, filters?: any) =>
     api.post('/report/generate', { type, filters }),
@@ -146,4 +139,4 @@ export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats'),
 };
 
-export default api; 
+export default api;

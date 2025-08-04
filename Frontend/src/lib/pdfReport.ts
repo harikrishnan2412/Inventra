@@ -21,15 +21,14 @@ interface jsPDFWithAutoTable extends jsPDF {
 
 export const generateOrderBill = (order: any) => {
   // --- Page Setup ---
-  // Use a custom narrow page size to mimic a receipt
   const receiptWidth = 80; // in mm
-  const pageHeight = 175; // A4 height
+  const pageHeight = 175;
   const doc = new jsPDF({
     unit: 'mm',
     format: [receiptWidth, pageHeight],
   });
   
-  // Set a monospaced font like a real receipt
+  // Set a monospaced font
   doc.setFont("courier", "normal");
   const leftMargin = 5;
   const rightMargin = receiptWidth - 5;
@@ -79,6 +78,22 @@ export const generateOrderBill = (order: any) => {
   doc.setFont("courier", "normal");
   doc.setFontSize(10);
   doc.text("Thank You!", receiptWidth / 2, currentY, { align: 'center' });
+  
+  // --- CANCELLED WATERMARK ---
+  if (order.status === 'cancelled') {
+    doc.setFontSize(30);
+    doc.setFont("courier", "bold");
+    doc.setTextColor(200, 0, 0); // Red color
+
+    // Calculate center for the narrow receipt and place it
+    const centerX = receiptWidth / 2;
+    const centerY = 70; // Position it vertically in the middle of the items
+
+    doc.text("CANCELLED", centerX, centerY, {
+      angle: 30, // Angle the text
+      align: 'center'
+    });
+  }
   
   // --- Download ---
   doc.save(`Receipt_Order_${order.order_id}.pdf`);

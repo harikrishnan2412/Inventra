@@ -1,6 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const InventoryController = require("../controllers/inventoryController");
+const { verifyToken } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -16,18 +17,18 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 //get all products 
-router.get("/all", InventoryController.getAllProducts);
+router.get("/all",verifyToken, InventoryController.getAllProducts);
 
 //add a product
-router.post("/add", upload.single("imageFile"), InventoryController.addProduct);
+router.post("/add",verifyToken, upload.single("imageFile"), InventoryController.addProduct);
 
 //edit a product 
-router.put("/edit/:code", InventoryController.editProduct);
+router.put("/edit/:code",verifyToken, InventoryController.editProduct);
 
 //delete a product
-router.delete("/delete/:code", InventoryController.deleteProductByCode);
+router.delete("/delete/:code",verifyToken, InventoryController.deleteProductByCode);
 
 //get all categories and its ids from db
-router.get("/all/category",InventoryController.getAllCategories);
+router.get("/all/category",verifyToken,InventoryController.getAllCategories);
 
 module.exports = router;

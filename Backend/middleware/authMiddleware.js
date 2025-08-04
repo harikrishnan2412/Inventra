@@ -1,3 +1,4 @@
+// In middleware/authMiddleware.js
 const jwt = require('jsonwebtoken');
 
 exports.verifyToken = (req, res, next) => {
@@ -14,6 +15,11 @@ exports.verifyToken = (req, res, next) => {
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ message: 'Invalid or expired token' });
+    // --- ADD THIS LOGIC ---
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: 'Session expired. Please log in again.' });
+    }
+    // For other errors (like invalid signature)
+    return res.status(401).json({ message: 'Invalid token.' });
   }
 };
