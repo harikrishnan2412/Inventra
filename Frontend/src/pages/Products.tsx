@@ -56,7 +56,7 @@ interface Product {
   description?: string;
   price: number;
   quantity: number; // Changed from stock_quantity
-  category?: string;
+  category_id?: string;
   image_url?: string;
   created_at: string;
 }
@@ -273,7 +273,7 @@ const Products = () => {
       price: product.price,
       quantity: product.quantity,
       description: product.description || "",
-      category: product.category || "",
+      category: product.category_id || "",
       image_url: product.image_url || ""
     });
     setIsEditModalOpen(true);
@@ -282,8 +282,8 @@ const Products = () => {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || product.category?.toLowerCase() === selectedCategory;
+      product.category_id?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || product.category_id?.toLowerCase() === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -515,7 +515,7 @@ const Products = () => {
                         </div>
                       </TableCell>
                       <TableCell className="font-mono">{product.code}</TableCell>
-                      <TableCell>{product.category || 'N/A'}</TableCell>
+                      <TableCell>{categories.find(c => c.id === product.category_id)?.name || 'N/A'}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {product.quantity < 10 && (

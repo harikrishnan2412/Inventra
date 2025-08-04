@@ -423,7 +423,7 @@ export class PDFReportGenerator {
       product.code || product.id,
       product.quantity?.toString() || product.stock_quantity?.toString() || '0',
       `₹${(product.price || 0).toFixed(2)}`,
-      product.category || 'N/A'
+      product.category_id || 'N/A'
     ]);
 
     autoTable(this.doc, {
@@ -457,13 +457,13 @@ export class PDFReportGenerator {
     if (lowStockItems.length === 0) {
       this.doc.setFontSize(12);
       this.doc.setTextColor(127, 140, 141);
-      this.doc.text('No low stock items', 20, (this.doc.lastAutoTable?.finalY || 0) + 20);
+      this.doc.text('No low stock items', 20, ((this.doc as any).lastAutoTable?.finalY || 0) + 20);
       return;
     }
 
     this.doc.setFontSize(14);
     this.doc.setTextColor(231, 76, 60);
-    this.doc.text('Low Stock Alert', 20, (this.doc.lastAutoTable?.finalY || 0) + 20);
+    this.doc.text('Low Stock Alert', 20, ((this.doc as any).lastAutoTable?.finalY || 0) + 20);
 
     const lowStockData = lowStockItems.map((item: any) => [
       item.name,
@@ -473,7 +473,7 @@ export class PDFReportGenerator {
     ]);
 
     autoTable(this.doc, {
-      startY: (this.doc.lastAutoTable?.finalY || 0) + 25,
+      startY: ((this.doc as any).lastAutoTable?.finalY || 0) + 25,
       head: [['Product Name', 'Current Stock', 'Threshold', 'Code']],
       body: lowStockData,
       theme: 'grid',
@@ -495,7 +495,7 @@ export class PDFReportGenerator {
   private createRevenueChart(data: ReportData): void {
     this.doc.setFontSize(14);
     this.doc.setTextColor(44, 62, 80);
-    this.doc.text('Revenue Analysis', 20, (this.doc.lastAutoTable?.finalY || 0) + 20);
+    this.doc.text('Revenue Analysis', 20, ((this.doc as any).lastAutoTable?.finalY || 0) + 20);
 
     this.doc.setFontSize(10);
     this.doc.setTextColor(52, 73, 94);
@@ -601,7 +601,7 @@ export class PDFReportGenerator {
       product.code || product.id,
       product.quantity?.toString() || product.stock_quantity?.toString() || '0',
       `₹${(product.price || 0).toFixed(2)}`,
-      product.category || 'N/A'
+      product.category_id || 'N/A'
     ]);
 
     autoTable(this.doc, {
