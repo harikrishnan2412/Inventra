@@ -19,7 +19,10 @@ import {
   AlertTriangle,
   Plus,
   Minus,
-  X
+  X,
+  DollarSign,
+  Package,
+  Clock
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -454,10 +457,25 @@ const Orders = () => {
     fetchOrders();
   }, []);
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async (reportType: string) => {
     setIsGeneratingReport(true);
     try {
-      await pdfReportGenerator.generateDetailedReport();
+      switch (reportType) {
+        case 'summary':
+          await pdfReportGenerator.generateSummaryReport();
+          break;
+        case 'available-stocks':
+          await pdfReportGenerator.generateAvailableStocksReport();
+          break;
+        case 'cancelled-orders':
+          await pdfReportGenerator.generateCancelledOrdersReport();
+          break;
+        case 'pending-orders':
+          await pdfReportGenerator.generatePendingOrdersReport();
+          break;
+        default:
+          await pdfReportGenerator.generateDetailedReport();
+      }
       toast({
         title: "Report Generated",
         description: "PDF report has been generated and downloaded successfully.",
@@ -583,21 +601,65 @@ const Orders = () => {
                 Generate Report
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Generate Report</DialogTitle>
                 <DialogDescription>
-                  Generate a comprehensive PDF report of all your business data including orders, products, and analytics.
+                  Choose the type of report you want to generate and download.
                 </DialogDescription>
               </DialogHeader>
-              <div className="flex justify-end">
+              <div className="grid grid-cols-2 gap-3">
                 <Button 
-                  onClick={handleGenerateReport} 
+                  onClick={() => handleGenerateReport('summary')} 
                   disabled={isGeneratingReport}
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-center gap-2"
                 >
-                  <FileText className="w-4 h-4 mr-2" />
-                  {isGeneratingReport ? "Generating..." : "Download Report"}
-                  {isGeneratingReport && <Loader2 className="w-4 h-4 ml-2 animate-spin" />}
+                  <DollarSign className="w-6 h-6" />
+                  <div>
+                    <div className="font-semibold">Summary Report</div>
+                    <div className="text-xs text-muted-foreground">Executive summary</div>
+                  </div>
+                  {isGeneratingReport && <Loader2 className="w-4 h-4 animate-spin" />}
+                </Button>
+                <Button 
+                  onClick={() => handleGenerateReport('available-stocks')} 
+                  disabled={isGeneratingReport}
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <Package className="w-6 h-6" />
+                  <div>
+                    <div className="font-semibold">Available Stocks</div>
+                    <div className="text-xs text-muted-foreground">Inventory table</div>
+                  </div>
+                  {isGeneratingReport && <Loader2 className="w-4 h-4 animate-spin" />}
+                </Button>
+                <Button 
+                  onClick={() => handleGenerateReport('cancelled-orders')} 
+                  disabled={isGeneratingReport}
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <AlertTriangle className="w-6 h-6" />
+                  <div>
+                    <div className="font-semibold">Cancelled Orders</div>
+                    <div className="text-xs text-muted-foreground">Cancelled orders table</div>
+                  </div>
+                  {isGeneratingReport && <Loader2 className="w-4 h-4 animate-spin" />}
+                </Button>
+                <Button 
+                  onClick={() => handleGenerateReport('pending-orders')} 
+                  disabled={isGeneratingReport}
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-center gap-2"
+                >
+                  <Clock className="w-6 h-6" />
+                  <div>
+                    <div className="font-semibold">Pending Orders</div>
+                    <div className="text-xs text-muted-foreground">Pending orders table</div>
+                  </div>
+                  {isGeneratingReport && <Loader2 className="w-4 h-4 animate-spin" />}
                 </Button>
               </div>
             </DialogContent>

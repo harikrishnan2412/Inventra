@@ -161,6 +161,68 @@ export class PDFReportGenerator {
     }
   }
 
+  async generateSummaryReport(): Promise<void> {
+    try {
+      const reportData = await this.fetchReportData();
+      
+      this.doc = new jsPDF();
+      this.createHeader();
+      this.createSummarySection(reportData);
+      
+      this.doc.save('summary-report.pdf');
+    } catch (error) {
+      console.error('Error generating summary report:', error);
+      throw error;
+    }
+  }
+
+  async generateAvailableStocksReport(): Promise<void> {
+    try {
+      const reportData = await this.fetchReportData();
+      
+      this.doc = new jsPDF();
+      this.createHeader();
+      this.createAvailableStocksTable(reportData.products);
+      
+      this.doc.save('available-stocks-report.pdf');
+    } catch (error) {
+      console.error('Error generating available stocks report:', error);
+      throw error;
+    }
+  }
+
+  async generateCancelledOrdersReport(): Promise<void> {
+    try {
+      const reportData = await this.fetchReportData();
+      const cancelledOrders = reportData.orders.filter((order: any) => order.status === 'cancelled');
+      
+      this.doc = new jsPDF();
+      this.createHeader();
+      this.createCancelledOrdersTable(cancelledOrders);
+      
+      this.doc.save('cancelled-orders-report.pdf');
+    } catch (error) {
+      console.error('Error generating cancelled orders report:', error);
+      throw error;
+    }
+  }
+
+  async generatePendingOrdersReport(): Promise<void> {
+    try {
+      const reportData = await this.fetchReportData();
+      const pendingOrders = reportData.orders.filter((order: any) => order.status === 'pending');
+      
+      this.doc = new jsPDF();
+      this.createHeader();
+      this.createPendingOrdersTable(pendingOrders);
+      
+      this.doc.save('pending-orders-report.pdf');
+    } catch (error) {
+      console.error('Error generating pending orders report:', error);
+      throw error;
+    }
+  }
+
   private async fetchReportData(): Promise<ReportData> {
     try {
       const [ordersResponse, productsResponse, salesStatsResponse, lowStockResponse] = await Promise.all([
@@ -294,16 +356,18 @@ export class PDFReportGenerator {
   }
 
   private createOrdersTable(orders: any[]): void {
+    const startY = (this.doc as any).lastAutoTable?.finalY || 60;
+    
     if (orders.length === 0) {
       this.doc.setFontSize(12);
       this.doc.setTextColor(127, 140, 141);
-      this.doc.text('No orders found', 20, this.doc.lastAutoTable.finalY + 20);
+      this.doc.text('No orders found', 20, startY + 20);
       return;
     }
 
     this.doc.setFontSize(14);
     this.doc.setTextColor(44, 62, 80);
-    this.doc.text('Recent Orders', 20, this.doc.lastAutoTable.finalY + 20);
+    this.doc.text('Recent Orders', 20, startY + 20);
 
     const ordersData = orders.slice(0, 10).map((order: any) => [
       order.order_id || order.id,
@@ -314,7 +378,7 @@ export class PDFReportGenerator {
     ]);
 
     autoTable(this.doc, {
-      startY: this.doc.lastAutoTable.finalY + 25,
+      startY: startY + 25,
       head: [['Order ID', 'Customer', 'Status', 'Amount', 'Date']],
       body: ordersData,
       theme: 'grid',
@@ -341,16 +405,18 @@ export class PDFReportGenerator {
   }
 
   private createProductsTable(products: any[]): void {
+    const startY = (this.doc as any).lastAutoTable?.finalY || 60;
+    
     if (products.length === 0) {
       this.doc.setFontSize(12);
       this.doc.setTextColor(127, 140, 141);
-      this.doc.text('No products found', 20, this.doc.lastAutoTable.finalY + 20);
+      this.doc.text('No products found', 20, startY + 20);
       return;
     }
 
     this.doc.setFontSize(14);
     this.doc.setTextColor(44, 62, 80);
-    this.doc.text('Product Inventory', 20, this.doc.lastAutoTable.finalY + 20);
+    this.doc.text('Product Inventory', 20, startY + 20);
 
     const productsData = products.slice(0, 15).map((product: any) => [
       product.name,
@@ -361,7 +427,7 @@ export class PDFReportGenerator {
     ]);
 
     autoTable(this.doc, {
-      startY: this.doc.lastAutoTable.finalY + 25,
+      startY: startY + 25,
       head: [['Product Name', 'Code', 'Stock', 'Price', 'Category']],
       body: productsData,
       theme: 'grid',
@@ -438,10 +504,10 @@ export class PDFReportGenerator {
     const pendingPercentage = data.totalOrders > 0 ? (data.pendingOrders / data.totalOrders) * 100 : 0;
     const cancelledPercentage = data.totalOrders > 0 ? (data.cancelledOrders / data.totalOrders) * 100 : 0;
 
-    this.doc.text(`Total Revenue: ₹${data.totalRevenue.toLocaleString('en-IN')}`, 20, (this.doc.lastAutoTable?.finalY || 0) + 35);
-    this.doc.text(`Order Completion Rate: ${revenuePercentage.toFixed(1)}%`, 20, (this.doc.lastAutoTable?.finalY || 0) + 45);
-    this.doc.text(`Pending Orders: ${pendingPercentage.toFixed(1)}%`, 20, (this.doc.lastAutoTable?.finalY || 0) + 55);
-    this.doc.text(`Cancellation Rate: ${cancelledPercentage.toFixed(1)}%`, 20, (this.doc.lastAutoTable?.finalY || 0) + 65);
+    this.doc.text(`Total Revenue: ₹${data.totalRevenue.toLocaleString('en-IN')}`, 20, ((this.doc as any).lastAutoTable?.finalY || 0) + 35);
+    this.doc.text(`Order Completion Rate: ${revenuePercentage.toFixed(1)}%`, 20, ((this.doc as any).lastAutoTable?.finalY || 0) + 45);
+    this.doc.text(`Pending Orders: ${pendingPercentage.toFixed(1)}%`, 20, ((this.doc as any).lastAutoTable?.finalY || 0) + 55);
+    this.doc.text(`Cancellation Rate: ${cancelledPercentage.toFixed(1)}%`, 20, ((this.doc as any).lastAutoTable?.finalY || 0) + 65);
   }
 
   private createSalesSummary(data: ReportData): void {
@@ -512,6 +578,153 @@ export class PDFReportGenerator {
       },
       styles: {
         cellPadding: 5
+      }
+    });
+  }
+
+  private createAvailableStocksTable(products: any[]): void {
+    const startY = (this.doc as any).lastAutoTable?.finalY || 60;
+    
+    if (products.length === 0) {
+      this.doc.setFontSize(12);
+      this.doc.setTextColor(127, 140, 141);
+      this.doc.text('No products found', 20, startY + 20);
+      return;
+    }
+
+    this.doc.setFontSize(14);
+    this.doc.setTextColor(44, 62, 80);
+    this.doc.text('Available Stocks', 20, startY + 20);
+
+    const stocksData = products.map((product: any) => [
+      product.name,
+      product.code || product.id,
+      product.quantity?.toString() || product.stock_quantity?.toString() || '0',
+      `₹${(product.price || 0).toFixed(2)}`,
+      product.category || 'N/A'
+    ]);
+
+    autoTable(this.doc, {
+      startY: startY + 25,
+      head: [['Product Name', 'Code', 'Stock', 'Price', 'Category']],
+      body: stocksData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [52, 73, 94],
+        textColor: 255,
+        fontSize: 10,
+        fontStyle: 'bold'
+      },
+      bodyStyles: {
+        fontSize: 9
+      },
+      styles: {
+        cellPadding: 3
+      },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 20 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 30 }
+      }
+    });
+  }
+
+  private createCancelledOrdersTable(cancelledOrders: any[]): void {
+    const startY = (this.doc as any).lastAutoTable?.finalY || 60;
+    
+    if (cancelledOrders.length === 0) {
+      this.doc.setFontSize(12);
+      this.doc.setTextColor(127, 140, 141);
+      this.doc.text('No cancelled orders found', 20, startY + 20);
+      return;
+    }
+
+    this.doc.setFontSize(14);
+    this.doc.setTextColor(231, 76, 60);
+    this.doc.text('Cancelled Orders', 20, startY + 20);
+
+    const cancelledOrdersData = cancelledOrders.map((order: any) => [
+      order.order_id || order.id,
+      order.customer?.name || 'Unknown',
+      order.status,
+      `₹${(order.total_price || 0).toFixed(2)}`,
+      new Date(order.order_date || order.created_at).toLocaleDateString('en-IN')
+    ]);
+
+    autoTable(this.doc, {
+      startY: startY + 25,
+      head: [['Order ID', 'Customer', 'Status', 'Amount', 'Date']],
+      body: cancelledOrdersData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [231, 76, 60],
+        textColor: 255,
+        fontSize: 10,
+        fontStyle: 'bold'
+      },
+      bodyStyles: {
+        fontSize: 9
+      },
+      styles: {
+        cellPadding: 3
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 25 }
+      }
+    });
+  }
+
+  private createPendingOrdersTable(pendingOrders: any[]): void {
+    const startY = (this.doc as any).lastAutoTable?.finalY || 60;
+    
+    if (pendingOrders.length === 0) {
+      this.doc.setFontSize(12);
+      this.doc.setTextColor(127, 140, 141);
+      this.doc.text('No pending orders found', 20, startY + 20);
+      return;
+    }
+
+    this.doc.setFontSize(14);
+    this.doc.setTextColor(44, 62, 80);
+    this.doc.text('Pending Orders', 20, startY + 20);
+
+    const pendingOrdersData = pendingOrders.map((order: any) => [
+      order.order_id || order.id,
+      order.customer?.name || 'Unknown',
+      order.status,
+      `₹${(order.total_price || 0).toFixed(2)}`,
+      new Date(order.order_date || order.created_at).toLocaleDateString('en-IN')
+    ]);
+
+    autoTable(this.doc, {
+      startY: startY + 25,
+      head: [['Order ID', 'Customer', 'Status', 'Amount', 'Date']],
+      body: pendingOrdersData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [52, 73, 94],
+        textColor: 255,
+        fontSize: 10,
+        fontStyle: 'bold'
+      },
+      bodyStyles: {
+        fontSize: 9
+      },
+      styles: {
+        cellPadding: 3
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        1: { cellWidth: 40 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 25 }
       }
     });
   }
