@@ -24,6 +24,7 @@ Inventra is an inventory management system designed to streamline operations for
 6.  *Export & Reports:*
     *   Export inventory list as CSV/PDF.
     *   Export sales report for a selected date range.
+    *   Export the bill of each order
 
 ## Workflow
 
