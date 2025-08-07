@@ -7,7 +7,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription
+  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,30 +16,35 @@ import {
   SelectTrigger,
   SelectValue,
   SelectContent,
-  SelectItem
+  SelectItem,
 } from "@/components/ui/select";
 import { Trash2, PlusCircle } from "lucide-react";
 
 const API_URL = "http://localhost:5000/api/users";
 
-// --- FIX 1: Define an interface for the component's props ---
 interface DashboardaProps {
   userRole: string;
 }
 
-// --- FIX 2: Update the component to accept the props ---
 const Dashboarda = ({ userRole }: DashboardaProps) => {
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
-    role: "manager"
+    role: "manager",
   });
   const [users, setUsers] = useState([]);
 
   const fetchUsers = async () => {
+    const token = localStorage.getItem("token");
+
     try {
-      const res = await axios.get(API_URL);
+      const res = await axios.get(API_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (Array.isArray(res.data.users)) {
         setUsers(res.data.users);
       } else {
@@ -57,15 +62,26 @@ const Dashboarda = ({ userRole }: DashboardaProps) => {
   }, []);
 
   const handleChange = (key: string, value: string) => {
-    setForm(prev => ({ ...prev, [key]: value }));
+    setForm((prev) => ({ ...prev, [key]: value }));
   };
 
   const handleCreate = async () => {
     const { name, email, password, role } = form;
     if (!name || !email || !password) return;
 
+    const token = localStorage.getItem("token");
+
     try {
-      await axios.post(API_URL, { name, email, password, role });
+      await axios.post(
+        API_URL,
+        { name, email, password, role },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       setForm({ name: "", email: "", password: "", role: "manager" });
       fetchUsers();
     } catch (err) {
@@ -74,8 +90,15 @@ const Dashboarda = ({ userRole }: DashboardaProps) => {
   };
 
   const handleRevoke = async (email: string) => {
+    const token = localStorage.getItem("token");
+
     try {
-      await axios.delete(`${API_URL}/${encodeURIComponent(email)}`);
+      await axios.delete(`${API_URL}/${encodeURIComponent(email)}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       fetchUsers();
     } catch (err) {
       console.error("Failed to revoke user:", err);
@@ -87,8 +110,9 @@ const Dashboarda = ({ userRole }: DashboardaProps) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Admin Panel</h1>
-          {/* You can optionally display the role for confirmation */}
-          <p className="text-muted-foreground">Manage team roles and access (Role: {userRole})</p>
+          <p className="text-muted-foreground">
+            Manage team roles and access (Role: {userRole})
+          </p>
         </div>
       </div>
 
@@ -103,23 +127,23 @@ const Dashboarda = ({ userRole }: DashboardaProps) => {
           <Input
             placeholder="Name"
             value={form.name}
-            onChange={e => handleChange("name", e.target.value)}
+            onChange={(e) => handleChange("name", e.target.value)}
           />
           <Input
             placeholder="Email"
             type="email"
             value={form.email}
-            onChange={e => handleChange("email", e.target.value)}
+            onChange={(e) => handleChange("email", e.target.value)}
           />
           <Input
             placeholder="Password"
             type="password"
             value={form.password}
-            onChange={e => handleChange("password", e.target.value)}
+            onChange={(e) => handleChange("password", e.target.value)}
           />
           <Select
             value={form.role}
-            onValueChange={val => handleChange("role", val)}
+            onValueChange={(val) => handleChange("role", val)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Role" />
