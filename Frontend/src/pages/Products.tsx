@@ -285,6 +285,18 @@ const Products = () => {
       product.category_id?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === "all" || product.category_id?.toLowerCase() === selectedCategory;
     return matchesSearch && matchesCategory;
+  }).sort((a, b) => {
+    // Sort by status: out of stock first, then in stock, then low stock
+    const getStatusPriority = (quantity: number) => {
+      if (quantity === 0) return 0; // Out of stock - highest priority
+      if (quantity >= 10) return 2; // In stock - lowest priority
+      return 1; // Low stock - medium priority
+    };
+    
+    const statusA = getStatusPriority(a.quantity);
+    const statusB = getStatusPriority(b.quantity);
+    
+    return statusA - statusB;
   });
 
   const getStockStatus = (quantity: number) => {
